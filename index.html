@@ -2,146 +2,165 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=1920,initial-scale=1">
 <title>Cosmos</title>
 <style>
-/* Écran d'accueil TV, thème Cosmos — compatible Tizen 6.5 (Chromium 85). Les photos 4K sont chargées depuis NASA/ESA/Wikimedia et cadrées sur la télé. */
-:root{--k:1;--or:#C9A86C;color-scheme:dark}
+/* Cosmos 2 — écran d'accueil TV (Tizen 6.5 / Chromium 85). Photos pré-cadrées 2048×1152, une seule préchargée à la fois. */
+:root{--ac:#E9C98B}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#f4efe6;font-family:"SamsungOne","Samsung Sans",Inter,"Segoe UI",system-ui,sans-serif;cursor:default}
-.bg{position:fixed;inset:0;overflow:hidden;background:#000}
-.scene{position:absolute;inset:0;opacity:0;transition:opacity 2.2s ease}
-.scene.on{opacity:1}
-.scene canvas{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.0)}
-.scene.on canvas{animation:kb 18s linear forwards}
-.scene.on.alt canvas{animation-name:kb2}
-@keyframes kb{from{transform:scale(1.0) translate(0,0)}to{transform:scale(1.07) translate(-1%,-.6%)}}
-@keyframes kb2{from{transform:scale(1.07) translate(1%,.6%)}to{transform:scale(1.0) translate(0,0)}}
-.shade{position:fixed;left:0;right:0;bottom:0;height:calc(260px*var(--k));pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.45))}
-.cap{position:fixed;left:calc(64px*var(--k));bottom:calc(52px*var(--k));transition:opacity 1s ease,transform .4s ease;text-shadow:0 1px calc(8px*var(--k)) rgba(0,0,0,.7)}
-.cap.hide{opacity:0}
-.cap b{display:block;font-size:calc(24px*var(--k));font-weight:500;letter-spacing:calc(.3px*var(--k));color:rgba(255,255,255,.88)}
-.cap small{display:block;margin-top:calc(4px*var(--k));font-size:calc(13px*var(--k));font-weight:400;letter-spacing:calc(.6px*var(--k));color:rgba(255,255,255,.45)}
-.clk{position:fixed;right:calc(64px*var(--k));bottom:calc(52px*var(--k));text-align:right;transition:transform .4s ease;text-shadow:0 1px calc(8px*var(--k)) rgba(0,0,0,.7)}
-.clk .t{font-size:calc(30px*var(--k));font-weight:300;letter-spacing:calc(.5px*var(--k));font-variant-numeric:tabular-nums;color:rgba(255,255,255,.85);line-height:1}
-.clk .d{margin-top:calc(6px*var(--k));font-size:calc(13px*var(--k));letter-spacing:calc(.6px*var(--k));color:rgba(255,255,255,.45);text-transform:capitalize}
-.band{position:fixed;left:0;right:0;bottom:0;height:calc(150px*var(--k));padding:0 calc(64px*var(--k));display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72) 45%);transform:translateY(100%);opacity:0;transition:transform .35s ease,opacity .35s ease}
-body.ui .band{transform:none;opacity:1}
-body.ui .cap,body.ui .clk{transform:translateY(calc(-175px*var(--k)))}
-.grp{display:flex;gap:calc(26px*var(--k));align-items:center}
-.app{all:unset;position:relative;width:calc(76px*var(--k));height:calc(76px*var(--k));border-radius:calc(20px*var(--k));display:grid;place-items:center;cursor:pointer;
-  background:rgba(255,255,255,.06);border:calc(1.5px*var(--k)) solid rgba(255,255,255,.14);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.app .ico{width:calc(56px*var(--k));height:calc(56px*var(--k));border-radius:calc(15px*var(--k));display:grid;place-items:center;color:#fff}
-.app .ico svg{width:calc(36px*var(--k));height:calc(36px*var(--k))}
-.app .lbl{position:absolute;left:50%;bottom:calc(98px*var(--k));transform:translate(-50%,calc(6px*var(--k)));white-space:nowrap;font-size:calc(20px*var(--k));font-weight:500;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.7)}
-.app .hd{position:absolute;bottom:calc(-20px*var(--k));left:50%;transform:translateX(-50%);white-space:nowrap;font-size:calc(11px*var(--k));font-weight:600;letter-spacing:calc(1.5px*var(--k));color:rgba(255,255,255,.5)}
-.app.on{transform:translateY(calc(-6px*var(--k))) scale(1.08);border-color:var(--or);box-shadow:0 0 calc(24px*var(--k)) rgba(201,168,108,.3)}
-.app.on .lbl{opacity:1;transform:translate(-50%,0)}
-.toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:calc(18px*var(--k)) calc(32px*var(--k));border-radius:calc(16px*var(--k));background:rgba(0,0,0,.7);font-size:calc(24px*var(--k));opacity:0;transition:opacity .3s;pointer-events:none}
-.toast.show{opacity:1}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#f6f1e7;font-family:"SamsungOne","Samsung Sans",Inter,"Segoe UI",system-ui,sans-serif;cursor:none}
+.ph{position:fixed;inset:0;opacity:0;transition:opacity 1.6s ease;will-change:opacity}
+.ph.on{opacity:1;z-index:1}
+.ph.off{opacity:0;z-index:0}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform;transform:scale(1)}
+.ph.on img,.ph.off img{animation:kb 24s linear forwards}
+body.bg .ph img{animation-play-state:paused}
+.ph.r.on img,.ph.r.off img{animation-name:kb2}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.04)}}
+@keyframes kb2{from{transform:scale(1.04)}to{transform:scale(1)}}
+.topv{position:fixed;left:0;top:0;width:900px;height:260px;background:radial-gradient(ellipse at 0 0,rgba(0,0,0,.42),rgba(0,0,0,0) 70%);opacity:0;transition:opacity 1s;z-index:2;pointer-events:none}
+.botv{position:fixed;left:0;right:0;bottom:0;height:380px;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.32) 40%,rgba(0,0,0,.8));z-index:2;pointer-events:none;opacity:.55;transition:opacity .45s}
+body.ui .botv{opacity:1}
+.hi{position:fixed;left:84px;top:66px;z-index:3;text-shadow:0 2px 14px rgba(0,0,0,.55);opacity:0;transition:opacity 1.2s}
+.hi b{display:block;font-size:44px;font-weight:300;letter-spacing:.3px}
+.hi small{display:block;margin-top:8px;font-size:22px;color:rgba(255,255,255,.8)}
+body.hello .hi,body.hello .topv{opacity:1}
+.cap{position:fixed;left:84px;bottom:64px;z-index:3;text-shadow:0 1px 10px rgba(0,0,0,.75);transition:opacity .6s}
+.cap b{display:block;font-size:28px;font-weight:500;color:rgba(255,255,255,.94)}
+.cap small{display:block;margin-top:6px;font-size:20px;color:rgba(255,255,255,.68)}
+body.ui .cap{opacity:0}
+.clk{position:fixed;right:84px;bottom:64px;z-index:3;text-align:right;text-shadow:0 1px 10px rgba(0,0,0,.75)}
+.clk .t{font-size:44px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+.clk .d{margin-top:8px;font-size:20px;color:rgba(255,255,255,.72)}
+.dock{position:fixed;left:50%;bottom:56px;z-index:4;transform:translate(-50%,40px);opacity:0;display:flex;align-items:flex-end;gap:34px;transition:opacity .3s,transform .3s}
+body.ui .dock{opacity:1;transform:translate(-50%,0)}
+.gap{width:10px}
+body.ui .clk .d{opacity:0}
+.clk .d{transition:opacity .3s}
+.app{width:124px;text-align:center}
+.app .ic{width:124px;height:124px;border-radius:30px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(20,22,26,.72);box-shadow:0 8px 24px rgba(0,0,0,.35);transition:transform .18s ease,box-shadow .18s ease}
+.app .ic img{width:100%;height:100%;object-fit:cover}
+.app .ic svg{width:54px;height:54px;stroke:#fff;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.app .nm{margin-top:16px;font-size:21px;color:rgba(255,255,255,.78);white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.8);transition:color .18s,transform .18s}
+.app.on .ic{transform:scale(1.2) translateY(-8px);box-shadow:0 0 0 4px var(--ac),0 16px 40px rgba(0,0,0,.55)}
+.app.on .nm{color:#fff;font-weight:600;transform:translateY(6px)}
+.veil{position:fixed;inset:0;z-index:6;background:#000;opacity:0;pointer-events:none;transition:opacity .4s;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:300;letter-spacing:.5px}
+.veil.on{opacity:.9}
+.toast{position:fixed;left:50%;top:70px;z-index:7;transform:translateX(-50%);padding:18px 32px;border-radius:16px;background:rgba(0,0,0,.8);font-size:24px;opacity:0;transition:opacity .3s;max-width:1500px;text-align:center}
+.toast.on{opacity:1}
+.diag{position:fixed;inset:80px;z-index:8;background:rgba(0,0,0,.92);border-radius:20px;padding:40px;font-size:18px;line-height:1.5;overflow:hidden;display:none;white-space:pre-wrap;column-count:3}
+.diag.on{display:block}
 </style>
 </head>
-<body>
-<div class="bg"><div class="scene" id="s0"><canvas width="1920" height="1080"></canvas></div><div class="scene" id="s1"><canvas width="1920" height="1080"></canvas></div></div>
-<div class="shade"></div>
-<div class="cap" id="cap"><b id="ct"></b><small id="cc"></small></div>
-<div class="clk"><div class="t" id="hh"></div><div class="d" id="dd"></div></div>
-<div class="band" id="band"><div class="grp" id="apps"></div><div class="grp" id="hdmi"></div></div>
+<body class="hello">
+<div class="ph" id="p0"><img alt=""></div><div class="ph" id="p1"><img alt=""></div>
+<div class="topv"></div><div class="botv"></div>
+<div class="hi"><b id="hb"></b><small id="hs"></small></div>
+<div class="cap"><b id="ct"></b><small id="cc"></small></div>
+<div class="clk"><div class="t" id="hh"></div><div class="d"><span id="dd"></span></div></div>
+<div class="dock" id="dock"></div>
+<div class="veil" id="veil"></div>
 <div class="toast" id="toast"></div>
+<div class="diag" id="diag"></div>
 <script>
-var EH='https://cdn.esahubble.org/archives/images/',EW='https://cdn.esawebb.org/archives/images/publicationjpg/',WM='https://upload.wikimedia.org/wikipedia/commons/';
-var PH=[
-{s:EH+'publicationjpg/heic1509a.jpg',m:'c',f:.5,t:'Westerlund 2',c:'Hubble · NASA, ESA'},
-{s:EW+'weic2205a.jpg',m:'c',f:.5,t:'Les Falaises cosmiques',c:'James Webb · NASA, ESA, CSA'},
-{s:EH+'publicationjpg/heic0601a.jpg',m:'c',f:.5,t:'Nébuleuse d’Orion',c:'Hubble · NASA, ESA'},
-{s:EH+'publicationjpg/heic0707a.jpg',m:'c',f:.5,t:'Nébuleuse de la Carène',c:'Hubble · NASA, ESA'},
-{s:EH+'publicationjpg/heic2007a.jpg',m:'c',f:.5,t:'La Tapisserie',c:'Hubble · NASA, ESA'},
-{s:EH+'publicationjpg/heic1608a.jpg',m:'c',f:.5,t:'Nébuleuse de la Bulle',c:'Hubble · NASA, ESA'},
-{s:EH+'publicationjpg/heic0910h.jpg',m:'c',f:.5,t:'Nébuleuse du Papillon',c:'Hubble · NASA, ESA'},
-{s:WM+"thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA's_Solar_Dynamics_Observatory_-_20100819.jpg/3840px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA's_Solar_Dynamics_Observatory_-_20100819.jpg",m:'p',f:.94,t:'Le Soleil',c:'SDO · NASA'},
-{s:WM+'d/d9/Mercury_in_color_-_Prockter07-edit1.jpg',m:'p',f:.9,t:'Mercure',c:'MESSENGER · NASA'},
-{s:WM+'a/a9/PIA23791-Venus-NewlyProcessedView-20200608.jpg',m:'p',f:.9,t:'Vénus',c:'Mariner 10 · NASA'},
-{s:WM+'9/97/The_Earth_seen_from_Apollo_17.jpg',m:'p',f:.92,t:'La Terre',c:'Apollo 17 · NASA · 1972'},
-{s:WM+'e/e1/FullMoon2010.jpg',m:'p',f:.8,t:'La Lune',c:'G. H. Revera'},
-{s:WM+'0/02/OSIRIS_Mars_true_color.jpg',m:'p',f:.9,t:'Mars',c:'Rosetta · ESA'},
-{s:WM+'5/5c/Phobos_colour_2008.jpg',m:'p',f:.72,t:'Phobos',c:'MRO · NASA'},
-{s:EH+'large/heic1914a.jpg',m:'p',f:.92,t:'Jupiter',c:'Hubble · NASA, ESA · 2019'},
-{s:WM+'7/7b/Io_highest_resolution_true_color.jpg',m:'p',f:.8,t:'Io',c:'Galileo · NASA'},
-{s:WM+'e/e4/Europa-moon-with-margins.jpg',m:'p',f:.76,t:'Europe',c:'Galileo · NASA'},
-{s:WM+'f/f2/Ganymede_g1_true-edit1.jpg',m:'p',f:.7,t:'Ganymède',c:'Galileo · NASA'},
-{s:WM+'thumb/e/e3/Saturn_from_Cassini_Orbiter_(2004-10-06).jpg/3840px-Saturn_from_Cassini_Orbiter_(2004-10-06).jpg',m:'p',f:.94,t:'Saturne',c:'Cassini · NASA'},
-{s:WM+'c/c7/Saturn_during_Equinox.jpg',m:'p',f:.94,t:'Saturne à l’équinoxe',c:'Cassini · NASA · 2009'},
-{s:WM+'8/83/PIA17202_-_Approaching_Enceladus.jpg',m:'p',f:.72,t:'Encelade',c:'Cassini · NASA'},
-{s:WM+'b/bc/Mimas_Cassini.jpg',m:'p',f:.74,t:'Mimas',c:'Cassini · NASA'},
-{s:WM+'thumb/c/c9/Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg/3840px-Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg',m:'p',f:.78,t:'Japet',c:'Cassini · NASA'},
-{s:WM+"c/c9/Uranus_as_seen_by_NASA's_Voyager_2_(remastered)_-_JPEG_converted.jpg",m:'p',f:.86,t:'Uranus',c:'Voyager 2 · NASA · 1986'},
-{s:WM+'5/56/Neptune_Full.jpg',m:'p',f:.88,t:'Neptune',c:'Voyager 2 · NASA · 1989'},
-{s:WM+'thumb/a/a6/Triton_moon_mosaic_Voyager_2_(large).jpg/3840px-Triton_moon_mosaic_Voyager_2_(large).jpg',m:'p',f:.78,t:'Triton',c:'Voyager 2 · NASA'},
-{s:WM+'thumb/e/ef/Pluto_in_True_Color_-_High-Res.jpg/3840px-Pluto_in_True_Color_-_High-Res.jpg',m:'p',f:.9,t:'Pluton',c:'New Horizons · NASA · 2015'},
-{s:WM+'2/2e/Charon_in_True_Color_-_High-Res.jpg',m:'p',f:.76,t:'Charon',c:'New Horizons · NASA · 2015'},
-{s:EH+'publicationjpg/opo0328a.jpg',m:'c',f:.5,t:'Galaxie du Sombrero',c:'Hubble · NASA'},
-{s:EH+'publicationjpg/heic0506a.jpg',m:'c',f:.5,t:'Galaxie du Tourbillon',c:'Hubble · NASA, ESA'},
-{s:EH+'publicationjpg/heic0406a.jpg',m:'c',f:.5,t:'Champ ultra-profond',c:'Hubble · NASA, ESA'}];
-var G='fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
-var W='M3 20.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1';
-var APPS=[
- {nm:'Netflix',c:'#c8102e',ic:'<path d="M4.5 10.5L12 5l7.5 5.5"/><path d="M6.5 10v4.5h11V10"/><path d="M10.5 14.5v-2.5h3v2.5"/><path d="M8 14.5v4M16 14.5v4"/><path d="'+W+'"/>'},
- {nm:'Prime Video',c:'#00a8e1',ic:'<path d="M3 14.5h18l-2.6 4H5.6z"/><path d="M7 14.5v-3h5v3"/><path d="M14 14.5V5.5l4.5 9"/><path d="'+W+'"/>'},
- {nm:'YouTube',c:'#ff3b30',ic:'<path d="M10 20.5l1-11h2l1 11z"/><path d="M9.3 9.5h5.4"/><path d="M11 6h2v3.5h-2z"/><path d="M12 6V4.5"/><path d="M6.5 5.5l2.5 1.3M17.5 5.5L15 6.8"/><path d="M10.6 14h2.8"/><path d="M5 20.5h14"/>'},
- {nm:'TV',c:'#4A7C8C',ic:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 20h8M12 17v3"/>'},
- {nm:'PlayStation',c:'#2f6fe0',hd:'HDMI 1',ic:'<path d="M5 8.5c3-3.4 11-3.4 14 0"/><path d="M5 8.5l7 6 7-6"/><path d="M12 14.5v1.8"/><path d="M2.5 21c3.8-4.6 7.4-5.6 10.3-5.6 2.9 0 6 1.7 8.7 5.6"/>'},
- {nm:'Switch',c:'#e4000f',hd:'HDMI 4',ic:'<path d="M11 3.5v12.5H4.5z"/><path d="M13 6.5v9.5h5.5z"/><path d="M3 18h18"/><path d="'+W+'"/>'}
-];
-var sel=0,els=[];
-APPS.forEach(function(a,i){var b=document.createElement('button');b.className='app';b.type='button';
- b.innerHTML='<span class="ico" style="background:'+a.c+'"><svg viewBox="0 0 24 24" '+G+'>'+a.ic+'</svg></span><span class="lbl">'+a.nm+'</span>'+(a.hd?'<span class="hd">'+a.hd+'</span>':'');
- b.addEventListener('click',function(){if(sel===i)launch();else pick(i);wake();});document.getElementById(a.hd?'hdmi':'apps').appendChild(b);els.push(b);});
-function pick(i){sel=(i+APPS.length)%APPS.length;els.forEach(function(e,k){e.classList.toggle('on',k===sel)});}
-var tt;function toast(m,d){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},d||2200);}
-var KEY={'Netflix':'netflix','Prime Video':'prime','YouTube':'youtube'};
+var PH=[{"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n00.jpg", "t": "La dune du Pilat", "c": "Bassin d’Arcachon · J. Braukmann", "a": "#6BB0EF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h06.jpg", "t": "Chevaux de Camargue", "c": "Saint-Laurent-d’Aigouze, Gard · B. Smith", "a": "#F0C66A", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n04.jpg", "t": "Crépuscule sur l’Alpe de Siusi", "c": "Dolomites, Italie · W. Moroder", "a": "#FFA15B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n01.jpg", "t": "Cheval blanc à Suryachaur", "c": "Népal · Shadow Ayush", "a": "#80ABDA", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n02.jpg", "t": "Aurore boréale sur Flakstad", "c": "Lofoten, Norvège · J. Groll", "a": "#9BEC6E", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n06.jpg", "t": "Dune géante de Sossusvlei", "c": "Namibie · D. Delso", "a": "#FFAB5B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h01.jpg", "t": "Trois chevaux dans les fleurs", "c": "Ukraine · Byrdyak", "a": "#FFEF5B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n08.jpg", "t": "Lac Peyto", "c": "Banff, Canada · T. Alt", "a": "#5BA9FF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/s02.jpg", "t": "Les Falaises cosmiques", "c": "James Webb · NASA, ESA, CSA", "a": "#63B0F6", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n09.jpg", "t": "Chevaux sur la plage de Jericoacoara", "c": "Brésil · T. Gomes", "a": "#FFA25B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n13.jpg", "t": "Les Tre Cime di Lavaredo", "c": "Dolomites, Italie · W. Moroder", "a": "#73B1E7", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n07.jpg", "t": "La Voie lactée sur Pedra Azul", "c": "Brésil · E. Neves", "a": "#EBCC6F", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n05.jpg", "t": "Poneys sauvages au lever du jour", "c": "Dülmen, Allemagne · D. Rabich", "a": "#FFC25B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n15.jpg", "t": "L’Everest au crépuscule", "c": "Népal · N. B. Gurung", "a": "#FF735B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h02.jpg", "t": "Poney gallois", "c": "Galtür, Tyrol · Basotxerri", "a": "#EBD26F", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/s01.jpg", "t": "Westerlund 2", "c": "Hubble · NASA, ESA", "a": "#FF9A5B", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n17.jpg", "t": "Skógafoss", "c": "Islande · M. Falbisoner", "a": "#7B90DF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n10.jpg", "t": "Aurore boréale", "c": "Estonie · T. Kuus", "a": "#5BFFB0", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n22.jpg", "t": "Deadvlei", "c": "Namibie · D. Delso", "a": "#5BB5FF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h00.jpg", "t": "Troupeau en estive", "c": "Pyrénées · Myrabella", "a": "#5B9AFF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n20.jpg", "t": "Le Watzmann", "c": "Alpes bavaroises · J. Braukmann", "a": "#75ACE4", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/s15.jpg", "t": "Jupiter", "c": "Hubble · 2019 · NASA, ESA", "a": "#FFAF5B", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n16.jpg", "t": "Chevaux sauvages des monts Šar", "c": "Kosovo · Aljabak", "a": "#FA9B60", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n21.jpg", "t": "Geirangerfjord", "c": "Norvège · S. Räsänen", "a": "#77A4E3", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n26.jpg", "t": "Éruption du Fimmvörðuháls", "c": "Islande · Boaworm", "a": "#FF9C5B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n11.jpg", "t": "Mer de brume sur les Carpates", "c": "Synevyr, Ukraine · R. Brechko", "a": "#FFB85B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h05.jpg", "t": "Jument et son poulain", "c": "Empordà, Catalogne · A. González", "a": "#D4AF86", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/s03.jpg", "t": "Nébuleuse d’Orion", "c": "Hubble · NASA, ESA", "a": "#F28468", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n25.jpg", "t": "Lac Louise", "c": "Banff, Canada · Chensiyuan", "a": "#5BE6FF", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n19.jpg", "t": "Aurore rouge et verte", "c": "Lucim, Pologne · Aneta P.", "a": "#FFB05B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n14.jpg", "t": "Antelope Canyon", "c": "Arizona, États-Unis · Meckimac", "a": "#FF905B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n28.jpg", "t": "Kirkjufell", "c": "Islande · J. Hałun", "a": "#D8D382", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/h07.jpg", "t": "Chevaux islandais", "c": "Búlandshöfði, Islande · D. Delso", "a": "#F5E465", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n23.jpg", "t": "Sous la Voie lactée", "c": "Oeschinensee, Suisse · G. Laurent", "a": "#C4CB8F", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n30.jpg", "t": "Galaxie spirale NGC 1300", "c": "Hubble · NASA, ESA", "a": "#E1A379", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n29.jpg", "t": "Reine", "c": "Lofoten, Norvège · S. Räsänen", "a": "#FFC65B", "s": 0}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/n32.jpg", "t": "Nébuleuse de la Carène", "c": "Hubble · NASA, ESA", "a": "#F9BA61", "s": 1}, {"f": "https://cdn.jsdelivr.net/gh/NonoBubu33/cosmos-tv@main/img/s30.jpg", "t": "Galaxie du Tourbillon", "c": "Hubble · NASA, ESA", "a": "#F2A868", "s": 1}];
 var SVC='http://127.0.0.1:8097/';
-function launch(){var a=APPS[sel];
- var path=a.hd?'source/hdmi/'+a.hd.replace(/\D/g,''):(a.nm==='TV'?'source/tv/1':'launch/'+KEY[a.nm]);
- toast((a.hd?'Passage sur '+a.hd+' — ':(a.nm==='TV'?'Passage sur la ':'Ouverture de '))+a.nm+'…',4000);
- var x=new XMLHttpRequest();x.open('GET',SVC+path);x.timeout=8000;
- x.onload=function(){var r={};try{r=JSON.parse(x.responseText);}catch(e){}if(!r.ok)toast(a.nm+' : '+(r.error||'erreur '+x.status),5000);};
- x.onerror=x.ontimeout=function(){toast('Service Cosmos non démarré — relance Cosmos depuis TizenBrew',5000);};
- x.send();}
-APPS.forEach(function(a,i){var k=KEY[a.nm];if(!k)return;var im=new Image();im.onload=function(){var s=els[i].querySelector('.ico');s.style.background='transparent';s.innerHTML='';im.style.cssText='width:100%;height:100%;object-fit:contain;border-radius:inherit';s.appendChild(im);};im.src=SVC+'icon/'+k;});
-var hideT;function wake(){document.body.classList.add('ui');clearTimeout(hideT);hideT=setTimeout(function(){document.body.classList.remove('ui')},8000);}
-function key(k){var ui=document.body.classList.contains('ui');
- if(!ui){if(k==='ArrowRight'){go(1);return;}if(k==='ArrowLeft'){go(-1);return;}wake();return;}
- wake();if(k==='ArrowRight')pick(sel+1);else if(k==='ArrowLeft')pick(sel-1);else if(k==='Enter')launch();else if(k==='ArrowDown'||k==='Escape'){document.body.classList.remove('ui');}}
-try{if(typeof tizen!=='undefined')['MediaPlayPause','ChannelUp','ChannelDown'].forEach(function(k){try{tizen.tvinputdevice.registerKey(k);}catch(e){}});}catch(e){}
-document.addEventListener('keydown',function(e){
- if(e.keyCode===10009){if(document.body.classList.contains('ui'))document.body.classList.remove('ui');else{try{tizen.application.getCurrentApplication().exit();}catch(x){}}e.preventDefault();return;}
- if(e.keyCode===427){go(1);e.preventDefault();return;}if(e.keyCode===428){go(-1);e.preventDefault();return;}
- var m={37:'ArrowLeft',38:'ArrowUp',39:'ArrowRight',40:'ArrowDown',13:'Enter',27:'Escape'}[e.keyCode];if(m){key(m);e.preventDefault();}});
-document.addEventListener('mousemove',function(e){if(e.clientY>innerHeight*.75)wake();});
-function fit(){document.documentElement.style.setProperty('--k',Math.min(innerWidth/1920,innerHeight/1080));}
-addEventListener('resize',fit);fit();
-var scn=[document.getElementById('s0'),document.getElementById('s1')],cur=-1,lay=0,timer,fails=0,busy=false,cache={};
-function bbox(img){var s=400/Math.max(img.width,img.height),w=Math.round(img.width*s),h=Math.round(img.height*s),c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.drawImage(img,0,0,w,h);var d=x.getImageData(0,0,w,h).data,x0=w,y0=h,x1=0,y1=0;for(var y=0;y<h;y++)for(var X=0;X<w;X++){var i=(y*w+X)*4;if(d[i]*.3+d[i+1]*.59+d[i+2]*.11>28){if(X<x0)x0=X;if(X>x1)x1=X;if(y<y0)y0=y;if(y>y1)y1=y;}}return [x0/s,y0/s,(x1+1)/s,(y1+1)/s];}
-function load(n,cb){if(cache[n]){cb(cache[n]);return;}var im=new Image();im.crossOrigin='anonymous';im.onload=function(){cache[n]=im;cb(im);};im.onerror=function(){cb(null);};im.src=PH[n].s;}
-function paint(cv,p,img){var W=cv.width,H=cv.height,x=cv.getContext('2d');x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.fillStyle='#000';x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
- if(p.m==='c'){var s=Math.max(W/img.width,H/img.height),dw=img.width*s,dh=img.height*s;x.drawImage(img,(W-dw)/2,(H-dh)*p.f,dw,dh);return;}
- var b=bbox(img),bw=b[2]-b[0],bh=b[3]-b[1],f=Math.min(p.f,bh*1.1/2160),s=Math.min(f*H/bh,0.94*W/bw),pad=0.05*Math.max(bw,bh);
- var sx=Math.max(0,b[0]-pad),sy=Math.max(0,b[1]-pad),sw=Math.min(img.width,b[2]+pad)-sx,sh=Math.min(img.height,b[3]+pad)-sy;
- var t=document.createElement('canvas');t.width=Math.max(1,Math.round(sw*s));t.height=Math.max(1,Math.round(sh*s));var tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(img,sx,sy,sw,sh,0,0,t.width,t.height);
- tx.globalCompositeOperation='destination-in';var ox=(b[0]-sx)*s,oy=(b[1]-sy)*s,cx=ox+bw*s/2,cy=oy+bh*s/2,rx=(bw*s)/2+pad*s*.85,ry=(bh*s)/2+pad*s*.85;tx.save();tx.translate(cx,cy);tx.scale(1,ry/rx);var g=tx.createRadialGradient(0,0,rx*0.92,0,0,rx);g.addColorStop(0,'#000');g.addColorStop(1,'rgba(0,0,0,0)');tx.fillStyle=g;tx.fillRect(-4*rx,-4*rx,8*rx,8*rx);tx.restore();
- x.drawImage(t,W/2-cx,H/2-cy);}
-function show(n){n=(n+PH.length)%PH.length;if(busy)return;busy=true;var p=PH[n],L=scn[lay^1];
- load(n,function(img){busy=false;if(!img){cur=n;if(++fails<PH.length)show(n+1);return;}
-  try{paint(L.querySelector('canvas'),p,img);}catch(e){cur=n;if(++fails<PH.length)show(n+1);return;}
-  L.className='scene'+(n%2?' alt':'');void L.offsetWidth;L.classList.add('on');scn[lay].classList.remove('on');lay^=1;cur=n;fails=0;cap(p);
-  var k=(n+1)%PH.length;for(var j in cache){if(+j!==n&&+j!==k)delete cache[j];}load(k,function(){});});}
-function cap(p){var c=document.getElementById('cap');c.classList.add('hide');setTimeout(function(){document.getElementById('ct').textContent=p.t;document.getElementById('cc').textContent=p.c;c.classList.remove('hide');},900);}
-function go(d){clearInterval(timer);show(cur+d);timer=setInterval(function(){show(cur+1)},16000);}
-go(1);
-function tick(){var d=new Date();document.getElementById('hh').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
- document.getElementById('dd').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});}
-tick();setInterval(tick,15000);pick(0);
+var IC={tv:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 20h8M12 17v3"/>',pad:'<path d="M6 9h4M8 7v4M15 10h.01M18 8h.01"/><path d="M5 5h14a3 3 0 0 1 3 3l-1 8a3 3 0 0 1-5 1l-1.5-2h-5L8 17a3 3 0 0 1-5-1L2 8a3 3 0 0 1 3-3z"/>',hand:'<path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 4v16M8.5 8.5h.01M15.5 15.5h.01"/>',set:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',play:'<path d="M8 5l11 7-11 7z"/>'};
+var APPS=[
+ {nm:'Netflix',go:'launch/netflix',ico:'netflix',pic:'play'},
+ {nm:'Prime Video',go:'launch/prime',ico:'prime',pic:'play'},
+ {nm:'YouTube',go:'launch/youtube',ico:'youtube',pic:'play'},
+ {gap:1},
+ {nm:'TV',go:'source/tv/1',pic:'tv'},
+ {nm:'PlayStation',go:'source/hdmi/1',pic:'pad'},
+ {nm:'Switch',go:'source/hdmi/4',pic:'hand'},
+ {gap:1},
+ {nm:'Réglages',go:'settings',pic:'set'}];
+var $=function(i){return document.getElementById(i)};
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+var B=document.body;function cls(c,on){var l=B.className.split(' ').filter(function(x){return x&&x!==c});if(on)l.push(c);B.className=l.join(' ')}
+function has(c){return (' '+B.className+' ').indexOf(' '+c+' ')>-1}
+/* ---------- Photos : ordre mélangé chaque jour ---------- */
+var today=new Date().toDateString(),seed=0;for(var i=0;i<today.length;i++)seed=(seed*31+today.charCodeAt(i))|0;
+function rnd(){seed=(seed*1103515245+12345)|0;return ((seed>>>8)&0xffff)/65536}
+var ORD=PH.map(function(_,i){return i});for(i=ORD.length-1;i>0;i--){var j=Math.floor(rnd()*(i+1)),t=ORD[i];ORD[i]=ORD[j];ORD[j]=t}
+(function(){var src=ORD.slice(),out=[];while(src.length){var k=0;if(out.length&&PH[out[out.length-1]].s){for(k=0;k<src.length&&PH[src[k]].s;k++);if(k===src.length)k=0;}out.push(src.splice(k,1)[0]);}ORD=out;})();
+var pos=store('cosmos.day')===today?+(store('cosmos.pos')||0)%PH.length:0;store('cosmos.day',today);
+var lay=0,flip=0,timer=null,offT=null,busy=false;
+function show(p){
+ if(busy)return;busy=true;p=(p+PH.length)%PH.length;var ph=PH[ORD[p]],N=$('p'+(lay^1)),O=$('p'+lay),img=N.querySelector('img');
+ var done=false,go=function(){if(done)return;done=true;busy=false;
+  var r=(flip++)%2?' r':'';O.className=O.className.replace('on','off');N.className='ph on'+r;
+  clearTimeout(offT);offT=setTimeout(function(){O.className='ph'},1800);
+  lay^=1;pos=p;store('cosmos.pos',p);$('ct').textContent=ph.t;$('cc').textContent=ph.c;
+  document.documentElement.style.setProperty('--ac',ph.a||'#E9C98B');
+  var nx=new Image();nx.src=PH[ORD[(p+1)%PH.length]].f;};
+ img.onerror=function(){busy=false;pos=p;show(p+1)};
+ img.onload=function(){if(img.decode)img.decode().then(go,go);else go()};
+ img.src=ph.f;
+ var guard=setTimeout(function(){if(!done){done=true;busy=false;pos=p;show(p+1)}},8000);
+ clearTimeout(timer);timer=setTimeout(function(){show(pos+1)},16000);
+}
+/* ---------- Horloge, météo, salutation ---------- */
+var J=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var WX='',WT='';
+function tick(){var d=new Date(),h=d.getHours(),m=d.getMinutes();$('hh').textContent=h+':'+(m<10?'0':'')+m;$('dd').textContent=J[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]+(WX?' · '+WX:'');}
+var WC={0:'ciel dégagé',1:'peu nuageux',2:'éclaircies',3:'couvert',45:'brouillard',48:'brouillard',51:'bruine',53:'bruine',55:'bruine',61:'pluie faible',63:'pluie',65:'forte pluie',71:'neige',73:'neige',75:'neige',80:'averses',81:'averses',82:'fortes averses',95:'orage',96:'orage',99:'orage'};
+function meteo(cb){var x=new XMLHttpRequest();x.open('GET','https://api.open-meteo.com/v1/forecast?latitude=44.64&longitude=-0.97&current=temperature_2m,weather_code&daily=sunset&forecast_days=1&timezone=Europe%2FParis');x.timeout=6000;
+ x.onload=function(){try{var r=JSON.parse(x.responseText),c=r.current;WX=Math.round(c.temperature_2m)+'°';WT=(WC[c.weather_code]||'')+' · '+WX+' à Biganos · coucher du soleil '+r.daily.sunset[0].slice(11);tick();$('hs').textContent=WT;}catch(e){}if(cb)cb()};
+ x.onerror=x.ontimeout=function(){if(cb)cb()};x.send();}
+function hello(){var h=new Date().getHours();$('hb').textContent=(h<5?'Bonne nuit':h<18?'Bonjour':'Bonsoir')+' Nicolas';
+ if(store('cosmos.hello')===today){cls('hello',false);return;}store('cosmos.hello',today);setTimeout(function(){cls('hello',false)},9000);}
+/* ---------- Dock ---------- */
+var dock=$('dock'),els=[],sel=+(store('cosmos.app')||0),uiT=null;
+APPS.forEach(function(a){if(a.gap){var s=document.createElement('div');s.className='gap';dock.appendChild(s);return;}
+ var e=document.createElement('div');e.className='app';e.innerHTML='<div class="ic"><svg viewBox="0 0 24 24">'+IC[a.pic]+'</svg></div><div class="nm">'+a.nm+'</div>';
+ if(a.ico){var im=new Image();im.onload=function(){var c=e.querySelector('.ic');c.innerHTML='';c.style.background='transparent';c.appendChild(im)};im.src=SVC+'icon/'+a.ico;}
+ dock.appendChild(e);els.push({el:e,a:a});});
+if(sel>=els.length)sel=0;
+function paint(){for(var i=0;i<els.length;i++)els[i].el.className='app'+(i===sel?' on':'')}
+function ui(on,ms){cls('ui',on);clearTimeout(uiT);if(on){paint();uiT=setTimeout(function(){ui(false)},ms||15000);}}
+var toT=null;function toast(t,ms){var e=$('toast');e.textContent=t;e.className='toast on';clearTimeout(toT);toT=setTimeout(function(){e.className='toast'},ms||5000);}
+function call(path,ok,ko){var x=new XMLHttpRequest();x.open('GET',SVC+path);x.timeout=10000;
+ x.onload=function(){var r={};try{r=JSON.parse(x.responseText)}catch(e){}if(x.status===200&&r.ok!==false)ok(r);else ko(r.error||('erreur '+x.status),true)};
+ x.onerror=function(){ko('',false)};x.ontimeout=function(){ko('pas de réponse',true)};x.send();}
+var launching=false;
+function launch(){if(launching)return;launching=true;var a=els[sel].a,v=$('veil');store('cosmos.app',sel);v.textContent=a.nm;v.className='veil on';
+ var hd=/^source\/hdmi/.test(a.go),tries=0,end=function(){launching=false};
+ var attempt=function(){tries++;call(a.go,function(){store('cosmos.ret',Date.now());setTimeout(function(){v.className='veil';ui(false);end()},2500)},
+  function(err,reached){if(!reached&&tries<2){v.textContent=a.nm+' ne répond pas, nouvel essai…';setTimeout(attempt,1500);return;}
+   v.className='veil';end();
+   if(!reached){svcDown();return;}
+   toast(hd?'Allume la manette '+a.nm+' : la télé bascule toute seule':a.nm+' : '+err,7000);})};attempt();}
+var pingT=null;function svcDown(){toast('Raccourcis indisponibles, redémarrage du service…',6000);clearTimeout(pingT);pingT=setTimeout(ping,30000);}
+function ping(){var px=new XMLHttpRequest();px.open('GET',SVC+'ping');px.timeout=4000;px.onload=function(){clearTimeout(pingT)};px.onerror=px.ontimeout=svcDown;px.send();}
+/* ---------- Diagnostic (touche rouge) ---------- */
+function diag(){var d=$('diag');if(d.className==='diag on'){d.className='diag';return;}d.textContent='Chargement…';d.className='diag on';
+ var x=new XMLHttpRequest();x.open('GET',SVC+'apps');x.timeout=6000;x.onload=function(){try{var r=JSON.parse(x.responseText);d.textContent='Applis installées :\n'+r.map(function(a){return a.name+'  ('+a.id+')'}).join('\n')}catch(e){d.textContent='Erreur'}};
+ x.onerror=x.ontimeout=function(){d.textContent='Service Cosmos absent'};x.send();}
+/* ---------- Télécommande ---------- */
+try{['ChannelUp','ChannelDown','MediaPlayPause','ColorF0Red'].forEach(function(k){tizen.tvinputdevice.registerKey(k)})}catch(e){}
+document.addEventListener('keydown',function(ev){var k=ev.keyCode,on=has('ui');
+ if($('diag').className==='diag on'){$('diag').className='diag';ev.preventDefault();return;}
+ if(k===403){diag();return;}
+ if(k===427){show(pos+1);return;} if(k===428){show(pos-1);return;}
+ if(k===10009||k===8||k===27){ev.preventDefault();if(on)ui(false);return;}
+ cls('hello',false);
+ if(launching)return;
+ if(!on){ui(true);return;}
+ if(k===37){sel=(sel+els.length-1)%els.length;ui(true);}
+ else if(k===39){sel=(sel+1)%els.length;ui(true);}
+ else if(k===38){ui(false);}
+ else if(k===13){launch();ev.preventDefault();}
+ else ui(true);
+});
+/* ---------- Démarrage ---------- */
+show(pos);tick();setInterval(tick,15000);meteo();setInterval(meteo,1800000);hello();
+var back=+(store('cosmos.ret')||0);store('cosmos.ret','0');
+ui(true,back&&Date.now()-back<6*3600e3?20000:8000);
+setTimeout(ping,1500);
+document.addEventListener('visibilitychange',function(){if(document.hidden){cls('bg',true);clearTimeout(timer);}
+ else{cls('bg',false);clearTimeout(timer);timer=setTimeout(function(){show(pos+1)},4000);if(+(store('cosmos.ret')||0)){store('cosmos.ret','0');ui(true,20000);}}});
 </script>
 </body>
 </html>
