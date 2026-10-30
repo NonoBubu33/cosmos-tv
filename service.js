@@ -1,7 +1,14 @@
 // Service Cosmos (TizenBrew) : lance les applis de la télé à la demande de la page.
 var http = require('http');
 var fs = require('fs');
-var KNOWN = { netflix: '3201907018807', prime: '3201910019365', youtube: '111299001912' };
+var CAND = { netflix: ['3201907018807', '11101200001'], prime: ['3201512006785', '3201910019365', 'org.tizen.primevideo'], youtube: ['111299001912'] };
+var KNOWN = {};
+function known(w) {
+  if (KNOWN[w]) return KNOWN[w];
+  var c = CAND[w] || [];
+  for (var i = 0; i < c.length; i++) { try { tizen.application.getAppInfo(c[i]); KNOWN[w] = c[i]; return c[i]; } catch (e) {} }
+  return null;
+}
 function send(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
   res.end(JSON.stringify(obj));
@@ -21,9 +28,9 @@ http.createServer(function (req, res) {
     var want = p[2].toLowerCase();
     listApps(function (l) {
       var hit = null;
-      l.forEach(function (a) { var n = (a.name || '').toLowerCase(); if (!hit && n.indexOf(want) > -1) hit = a; });
-      if (hit) launchId(hit.id, res); else if (KNOWN[want]) launchId(KNOWN[want], res); else send(res, 404, { ok: false, error: want + ' introuvable' });
-    }, function () { if (KNOWN[want]) launchId(KNOWN[want], res); else send(res, 404, { ok: false, error: want + ' : liste des applis indisponible' }); });
+      l.forEach(function (a) { var n = (a.name || '').toLowerCase(); if (!hit && (n.indexOf(want) > -1 || (want === 'prime' && n.indexOf('amazon') > -1))) hit = a; });
+      if (hit) launchId(hit.id, res); else if (known(want)) launchId(known(want), res); else send(res, 404, { ok: false, error: want + ' introuvable' });
+    }, function () { if (known(want)) launchId(known(want), res); else send(res, 404, { ok: false, error: want + ' : liste des applis indisponible' }); });
     return;
   }
   if (p[1] === 'icon' && p[2]) {
@@ -41,9 +48,9 @@ http.createServer(function (req, res) {
     };
     listApps(function (l) {
       var hit = null;
-      l.forEach(function (a) { var n = (a.name || '').toLowerCase(); if (!hit && n.indexOf(w) > -1) hit = a; });
-      if (hit) sendIcon(hit.id); else if (KNOWN[w]) sendIcon(KNOWN[w]); else send(res, 404, { error: 'introuvable' });
-    }, function () { if (KNOWN[w]) sendIcon(KNOWN[w]); else send(res, 404, { error: 'introuvable' }); });
+      l.forEach(function (a) { var n = (a.name || '').toLowerCase(); if (!hit && (n.indexOf(w) > -1 || (w === 'prime' && n.indexOf('amazon') > -1))) hit = a; });
+      if (hit) sendIcon(hit.id); else if (known(w)) sendIcon(known(w)); else send(res, 404, { error: 'introuvable' });
+    }, function () { if (known(w)) sendIcon(known(w)); else send(res, 404, { error: 'introuvable' }); });
     return;
   }
   if (p[1] === 'source' && p[2]) {
