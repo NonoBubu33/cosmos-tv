@@ -159,5 +159,5 @@ http.createServer(function (req, res) {
     return;
   }
   send(res, 404, { error: 'inconnu' });
-}).listen(8097, '127.0.0.1');
+}).on('error', function (e) { log('serveur : ' + e.message); }).listen(8097, '127.0.0.1');
 listApps(function () {});
