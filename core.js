@@ -84,18 +84,38 @@ function rest(method, path, cb) {
 // Si elle est seulement cachée (touche Maison), on ne force rien : l'accueil Samsung reste accessible.
 function watch(id) {
   stopWatch(); watched = id; since = Date.now();
-  var seen = false, ticks = 0, lastState = '';
+  var seen = false, ticks = 0, lastState = '', hiddenN = 0;
   log('surveillance ' + id);
+  // Écoute des changements d'état fournis par la télé (si disponible)
+  try {
+    lsn = tizen.application.addAppStatusChangeListener(function (appId, status) {
+      if (appId === watched) log('statut ' + status);
+    }, id);
+  } catch (e) { lsn = null; }
   watchT = setInterval(function () {
     ticks++;
+    // 1) API REST de la télé : running / visible
     rest('GET', 'applications/' + id, function (err, j) {
       if (watched !== id) return;
-      if (err || !j) { if (ticks % 30 === 1) log('état appli KO ' + (err ? err.message : 'vide')); return; }
+      if (err || !j || typeof j.running === 'undefined') { if (ticks % 30 === 1) log('état REST KO ' + (err ? err.message : JSON.stringify(j).slice(0, 60))); return; }
       var st = (j.running ? 'R' : '-') + (j.visible ? 'V' : '-');
-      if (st !== lastState) { log('état ' + id + ' ' + st); lastState = st; }
-      if (j.running && j.visible) { seen = true; return; }
-      if (seen && !j.running) back('fermée');
+      if (st !== lastState) { log('état ' + st); lastState = st; }
+      if (j.running && j.visible) { seen = true; hiddenN = 0; return; }
+      if (!seen) return;
+      if (!j.running) { back('fermée'); return; }
+      // cachée mais toujours en mémoire : Netflix/Prime après « Quitter » → retour Cosmos au bout de 2 s
+      if (++hiddenN >= 2) back('quittée');
     });
+    // 2) Secours : liste des applis en cours de Tizen
+    try {
+      tizen.application.getAppsContext(function (ctx) {
+        if (watched !== id) return;
+        var running = false;
+        for (var i = 0; i < ctx.length; i++) if (ctx[i].appId === id) running = true;
+        if (running) { if (!seen && ticks > 3) seen = true; return; }
+        if (seen && lastState === '') back('fermée (tizen)');
+      }, function () {});
+    } catch (e) {}
     if (ticks > 21600) stopWatch();
   }, 1000);
 }
