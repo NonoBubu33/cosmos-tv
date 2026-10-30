@@ -133,12 +133,23 @@ function launch(){if(launching)return;launching=true;var a=els[sel].a,v=$('veil'
    v.className='veil';end();
    if(!reached){svcDown();return;}
    toast(hd?'Allume la manette '+a.nm+' : la télé bascule toute seule':a.nm+' : '+err,7000);})};attempt();}
-var pingT=null;function svcDown(){toast('Raccourcis indisponibles, redémarrage du service…',6000);clearTimeout(pingT);pingT=setTimeout(ping,30000);}
-function ping(){var px=new XMLHttpRequest();px.open('GET',SVC+'ping');px.timeout=4000;px.onload=function(){clearTimeout(pingT)};px.onerror=px.ontimeout=svcDown;px.send();}
+/* Dialogue avec TizenBrew (ws://127.0.0.1:8081) : état des services et relance du service Cosmos s'il est absent ou planté. */
+var TBST='';
+function tbAsk(cb){var out={},fin=false,end=function(){if(fin)return;fin=true;try{w.close()}catch(e){}cb(out)},w;
+ try{w=new WebSocket('ws://127.0.0.1:8081')}catch(e){out.err='ws '+e.message;cb(out);return}
+ w.onopen=function(){w.send(JSON.stringify({type:7}));w.send(JSON.stringify({type:4}))};
+ w.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type===7)out.st=m.payload;if(m.type===4)out.mods=m.payload}catch(x){}if(out.st&&out.mods)end()};
+ w.onerror=function(){out.err='TizenBrew injoignable';end()};setTimeout(end,4000);}
+function revive(){tbAsk(function(o){var mine=null,st=null;(o.mods||[]).forEach(function(m){if(m.serviceFile&&/cosmos/i.test(m.fullName||m.name||''))mine=m});
+ (o.st||[]).forEach(function(x){if(mine&&x.name===mine.fullName)st=x});
+ TBST=(o.err?o.err+' · ':'')+'services: '+JSON.stringify(o.st||[]).slice(0,300)+' · module: '+(mine?mine.fullName:'introuvable');
+ if(mine&&(!st||st.hasCrashed)){try{var w=new WebSocket('ws://127.0.0.1:8081');w.onopen=function(){w.send(JSON.stringify({type:6,payload:mine}));setTimeout(function(){try{w.close()}catch(e){}},1500)}}catch(e){}TBST+=' · relancé';}});}
+var pingT=null,downN=0;function svcDown(){downN++;toast(downN<2?'Raccourcis indisponibles, redémarrage du service…':'Raccourcis indisponibles — nouvel essai…',6000);if(downN<=3)revive();clearTimeout(pingT);pingT=setTimeout(ping,downN<3?8000:30000);}
+function ping(){var px=new XMLHttpRequest();px.open('GET',SVC+'ping');px.timeout=4000;px.onload=function(){clearTimeout(pingT);if(downN){downN=0;toast('Raccourcis prêts',2500)}};px.onerror=px.ontimeout=svcDown;px.send();}
 /* ---------- Diagnostic (touche rouge) ---------- */
 function diag(){var d=$('diag');if(d.className==='diag on'){d.className='diag';return;}d.textContent='Chargement…';d.className='diag on';
  var x=new XMLHttpRequest();x.open('GET',SVC+'apps');x.timeout=6000;x.onload=function(){try{var r=JSON.parse(x.responseText);d.textContent='Applis installées :\n'+r.map(function(a){return a.name+'  ('+a.id+')'}).join('\n')}catch(e){d.textContent='Erreur'}};
- x.onerror=x.ontimeout=function(){d.textContent='Service Cosmos absent'};x.send();}
+ x.onerror=x.ontimeout=function(){d.textContent='Chargement de l’état TizenBrew…';tbAsk(function(o){d.textContent='Service Cosmos absent\n\nTizenBrew : '+(o.err||'')+'\nservices : '+JSON.stringify(o.st||null,null,1)+'\n\nmodules : '+JSON.stringify((o.mods||[]).map(function(m){return (m.fullName||m.name)+' service='+m.serviceFile}),null,1)})};x.send();}
 /* ---------- Télécommande ---------- */
 try{['ChannelUp','ChannelDown','MediaPlayPause','ColorF0Red'].forEach(function(k){tizen.tvinputdevice.registerKey(k)})}catch(e){}
 document.addEventListener('keydown',function(ev){var k=ev.keyCode,on=has('ui');
