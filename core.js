@@ -44,7 +44,7 @@ function find(w, cb) {
       var c = CAND[w] || [];
       for (var k = 0; k < c.length && !hit; k++) { try { tizen.application.getAppInfo(c[k]); hit = c[k]; } catch (e) {} }
     }
-    if (hit) KNOWN[w] = hit;
+    if (hit && !/dummy/i.test(hit)) KNOWN[w] = hit;
     cb(hit || dum);
   });
 }
@@ -125,6 +125,7 @@ http.createServer(function (req, res) {
   if (a === 'apps') { APPS = null; listApps(function (l) { var f = b === 'all' ? l : l.filter(function (x) { return /tv|channel|epg|hdmi|source|setting|netflix|prime|youtube|disney|canal|plus|live|vod|player|viewer/i.test(x.name + ' ' + x.id); }); send(res, 200, [{ name: '» Cosmos (retour) = ' + tbApp(), id: 'self' }].concat(LOG.map(function (m) { return { name: '» ' + m, id: 'log' }; }), [{ name: '— applis utiles (' + f.length + '/' + l.length + ') —', id: '' }], f)); }); return; }
   if (a === 'settings') { openSettings(res); return; }
   if (a === 'launch' && b) {
+    APPS = null; if (KNOWN[b] && /dummy/i.test(KNOWN[b])) delete KNOWN[b];
     find(b, function (id) {
       if (id && /dummy/i.test(id)) { send(res, 404, { ok: false, error: 'pas installée sur la télé — installe-la depuis Applis' }); return; }
       if (id) launchId(id, res); else send(res, 404, { ok: false, error: 'appli non installée' });
