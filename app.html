@@ -122,17 +122,17 @@ if(sel>=els.length)sel=0;
 function paint(){for(var i=0;i<els.length;i++)els[i].el.className='app'+(i===sel?' on':'')}
 function ui(on,ms){cls('ui',on);clearTimeout(uiT);if(on){paint();uiT=setTimeout(function(){ui(false)},ms||15000);}}
 var toT=null;function toast(t,ms){var e=$('toast');e.textContent=t;e.className='toast on';clearTimeout(toT);toT=setTimeout(function(){e.className='toast'},ms||5000);}
-function call(path,ok,ko){var x=new XMLHttpRequest();x.open('GET',SVC+path);x.timeout=10000;
+function call(path,ok,ko){var x=new XMLHttpRequest();x.open('GET',SVC+path);x.timeout=/^(source|settings)/.test(path)?35000:10000;
  x.onload=function(){var r={};try{r=JSON.parse(x.responseText)}catch(e){}if(x.status===200&&r.ok!==false)ok(r);else ko(r.error||('erreur '+x.status),true)};
  x.onerror=function(){ko('',false)};x.ontimeout=function(){ko('pas de réponse',true)};x.send();}
 var launching=false;
-function launch(){if(launching)return;launching=true;var a=els[sel].a,v=$('veil');store('cosmos.app',sel);v.textContent=a.nm;v.className='veil on';
+function launch(){if(launching)return;launching=true;var a=els[sel].a,v=$('veil');store('cosmos.app',sel);v.textContent=/^(source|settings)/.test(a.go)?a.nm+' — si la télé demande d’autoriser « Cosmos », choisis Autoriser':a.nm;v.className='veil on';
  var hd=/^source\/hdmi/.test(a.go),tries=0,end=function(){launching=false};
  var attempt=function(){tries++;call(a.go,function(){store('cosmos.ret',Date.now());setTimeout(function(){v.className='veil';ui(false);end()},2500)},
   function(err,reached){if(!reached&&tries<3){if(tries===1)revive();v.textContent='Préparation de '+a.nm+'…';setTimeout(attempt,Math.max(4500,8000-(Date.now()-T0)+3000));return;}
    v.className='veil';end();
    if(!reached){svcDown();return;}
-   toast(hd?'Allume la manette '+a.nm+' : la télé bascule toute seule':a.nm+' : '+err,7000);})};attempt();}
+   toast(a.nm+' : '+err,8000);})};attempt();}
 /* Dialogue avec TizenBrew (ws://127.0.0.1:8081) : état des services et relance du service Cosmos s'il est absent ou planté. */
 var TBST='';
 function tbAsk(cb){var out={},fin=false,end=function(){if(fin)return;fin=true;try{w.close()}catch(e){}cb(out)},w;
@@ -141,7 +141,7 @@ function tbAsk(cb){var out={},fin=false,end=function(){if(fin)return;fin=true;tr
  w.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type===7)out.st=m.payload;if(m.type===4)out.mods=m.payload}catch(x){}if(out.st&&out.mods)end()};
  w.onerror=function(){out.err='TizenBrew injoignable';end()};setTimeout(end,4000);}
 /* Relance de secours : demande à TizenBrew de démarrer directement le cœur du service (core.js, version figée et testée). */
-var CORE={fullName:'gh/NonoBubu33/cosmos-tv@2f0e208',name:'cosmos-core',serviceFile:'core.js',appName:'Cosmos'};
+var CORE={fullName:'gh/NonoBubu33/cosmos-tv@3b7908d',name:'cosmos-core',serviceFile:'core.js',appName:'Cosmos'};
 var T0=Date.now();
 function revive(){if(Date.now()-T0<8000){setTimeout(revive,8000-(Date.now()-T0));return;}tbAsk(function(o){var st=null;(o.st||[]).forEach(function(x){if(x.name===CORE.fullName)st=x});
  TBST=(o.err?o.err+' · ':'')+'services: '+JSON.stringify(o.st||[]).slice(0,300);
