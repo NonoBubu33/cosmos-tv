@@ -102,7 +102,56 @@ function watch(id) {
 // Télécommande virtuelle (même canal que l'appli SmartThings) : la 1re fois, la télé demande d'autoriser « Cosmos ».
 var TOKEN = null, TOKF = '/home/owner/share/cosmos-token.txt';
 try { TOKEN = fs.readFileSync(TOKF, 'utf8').trim() || null; } catch (e) {}
-function wsLib() { var n = ['ws-old', 'ws-new', 'ws']; for (var i = 0; i < n.length; i++) { try { return require(n[i]); } catch (e) {} } return null; }
+// Client WebSocket minimal (sans bibliothèque) : poignée de main HTTP + trames texte masquées.
+function rnd(n) { var b = new Buffer(n); for (var i = 0; i < n; i++) b[i] = Math.floor(Math.random() * 256); return b; }
+function MiniWS(url) {
+  var self = this, m = /^(wss?):\/\/([^\/:]+):(\d+)(\/.*)$/.exec(url), secure = m[1] === 'wss', host = m[2], port = +m[3], path = m[4];
+  self.h = {}; self.open = false;
+  var key = rnd(16).toString('base64'), buf = new Buffer(0), sock;
+  var onConn = function () {
+    sock.write('GET ' + path + ' HTTP/1.1\r\nHost: ' + host + ':' + port + '\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ' + key + '\r\nSec-WebSocket-Version: 13\r\n\r\n');
+  };
+  try {
+    if (secure) sock = require('tls').connect({ host: host, port: port, rejectUnauthorized: false }, onConn);
+    else { sock = require('net').connect(port, host); sock.on('connect', onConn); }
+  } catch (e) { setTimeout(function () { self.emit('error', e); }, 0); return; }
+  self.sock = sock;
+  sock.on('error', function (e) { self.emit('error', e); });
+  sock.on('close', function () { self.emit('close'); });
+  sock.on('data', function (d) {
+    buf = Buffer.concat([buf, d]);
+    if (!self.open) {
+      var i = buf.toString('binary').indexOf('\r\n\r\n'); if (i < 0) return;
+      var head = buf.slice(0, i).toString();
+      if (!/^HTTP\/1\.1 101/.test(head)) { self.emit('error', new Error(head.split('\r\n')[0])); try { sock.destroy(); } catch (e) {} return; }
+      self.open = true; buf = buf.slice(i + 4);
+    }
+    while (buf.length >= 2) {
+      var op = buf[0] & 15, len = buf[1] & 127, off = 2;
+      if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); off = 4; }
+      else if (len === 127) { if (buf.length < 10) return; len = buf.readUInt32BE(6); off = 10; }
+      if (buf.length < off + len) return;
+      var pl = buf.slice(off, off + len); buf = buf.slice(off + len);
+      if (op === 1) self.emit('message', pl.toString('utf8'));
+      else if (op === 9) self.frame(10, pl);
+      else if (op === 8) { try { sock.end(); } catch (e) {} }
+    }
+  });
+}
+MiniWS.prototype.on = function (ev, fn) { this.h[ev] = fn; return this; };
+MiniWS.prototype.emit = function (ev, a) { if (this.h[ev]) this.h[ev](a); };
+MiniWS.prototype.frame = function (op, data) {
+  var pl = typeof data === 'string' ? new Buffer(data, 'utf8') : data, len = pl.length, hd;
+  if (len < 126) { hd = new Buffer(2); hd[1] = 0x80 | len; }
+  else { hd = new Buffer(4); hd[1] = 0x80 | 126; hd.writeUInt16BE(len, 2); }
+  hd[0] = 0x80 | op;
+  var mk = rnd(4), out = new Buffer(len);
+  for (var i = 0; i < len; i++) out[i] = pl[i] ^ mk[i % 4];
+  this.sock.write(Buffer.concat([hd, mk, out]));
+};
+MiniWS.prototype.send = function (t) { this.frame(1, t); };
+MiniWS.prototype.close = function () { try { this.frame(8, new Buffer(0)); this.sock.end(); } catch (e) {} };
+function wsLib() { return MiniWS; }
 function sendKey(key, cb) {
   var WS = wsLib(); if (!WS) { cb('module ws absent'); return; }
   var name = new Buffer('Cosmos').toString('base64');
@@ -114,7 +163,7 @@ function sendKey(key, cb) {
     var done = false, w;
     var fin = function (ok, why) { if (done) return; done = true; clearTimeout(t); try { w.close(); } catch (e) {} if (ok) cb(null); else { lastErr = why; if (why === 'refusé') cb('autorisation refusée sur la télé'); else next(i + 1); } };
     var t = setTimeout(function () { fin(false, 'délai dépassé'); }, TOKEN ? 6000 : 30000);
-    try { w = new WS(urls[i], { rejectUnauthorized: false }); } catch (e) { fin(false, e.message); return; }
+    try { w = new WS(urls[i]); } catch (e) { fin(false, e.message); return; }
     w.on('message', function (m) {
       var j = {}; try { j = JSON.parse(m); } catch (e) {}
       if (j.event === 'ms.channel.connect') {
@@ -124,7 +173,7 @@ function sendKey(key, cb) {
         setTimeout(function () { fin(true); }, 500);
       } else if (j.event === 'ms.channel.unauthorized') fin(false, 'refusé');
     });
-    w.on('error', function (e) { fin(false, e && e.message); });
+    w.on('error', function (e) { log('télécommande ' + (i === 0 ? '8002' : '8001') + ' : ' + (e && e.message)); fin(false, e && e.message); });
   })(0);
 }
 function launchId(id, res) {
