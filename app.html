@@ -141,7 +141,7 @@ function tbAsk(cb){var out={},fin=false,end=function(){if(fin)return;fin=true;tr
  w.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type===7)out.st=m.payload;if(m.type===4)out.mods=m.payload}catch(x){}if(out.st&&out.mods)end()};
  w.onerror=function(){out.err='TizenBrew injoignable';end()};setTimeout(end,4000);}
 /* Relance de secours : demande à TizenBrew de démarrer directement le cœur du service (core.js, version figée et testée). */
-var CORE={fullName:'gh/NonoBubu33/cosmos-tv@5e849de',name:'cosmos-core',serviceFile:'core.js',appName:'Cosmos'};
+var CORE={fullName:'gh/NonoBubu33/cosmos-tv@b382421',name:'cosmos-core',serviceFile:'core.js',appName:'Cosmos'};
 var T0=Date.now();
 function revive(){if(Date.now()-T0<8000){setTimeout(revive,8000-(Date.now()-T0));return;}tbAsk(function(o){var st=null;(o.st||[]).forEach(function(x){if(x.name===CORE.fullName)st=x});
  TBST=(o.err?o.err+' · ':'')+'services: '+JSON.stringify(o.st||[]).slice(0,300);
