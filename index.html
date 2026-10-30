@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cosmos</title>
+<style>
+/* Écran d'accueil TV, thème Cosmos — compatible Tizen 6.5 (Chromium 85). Les photos 4K sont chargées depuis NASA/ESA/Wikimedia et cadrées sur la télé. */
+:root{--k:1;--or:#C9A86C;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#f4efe6;font-family:"SamsungOne","Samsung Sans",Inter,"Segoe UI",system-ui,sans-serif;cursor:default}
+.bg{position:fixed;inset:0;overflow:hidden;background:#000}
+.scene{position:absolute;inset:0;opacity:0;transition:opacity 2.2s ease}
+.scene.on{opacity:1}
+.scene canvas{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.0)}
+.scene.on canvas{animation:kb 18s linear forwards}
+.scene.on.alt canvas{animation-name:kb2}
+@keyframes kb{from{transform:scale(1.0) translate(0,0)}to{transform:scale(1.07) translate(-1%,-.6%)}}
+@keyframes kb2{from{transform:scale(1.07) translate(1%,.6%)}to{transform:scale(1.0) translate(0,0)}}
+.shade{position:fixed;left:0;right:0;bottom:0;height:calc(260px*var(--k));pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.45))}
+.cap{position:fixed;left:calc(64px*var(--k));bottom:calc(52px*var(--k));transition:opacity 1s ease,transform .4s ease;text-shadow:0 1px calc(8px*var(--k)) rgba(0,0,0,.7)}
+.cap.hide{opacity:0}
+.cap b{display:block;font-size:calc(24px*var(--k));font-weight:500;letter-spacing:calc(.3px*var(--k));color:rgba(255,255,255,.88)}
+.cap small{display:block;margin-top:calc(4px*var(--k));font-size:calc(13px*var(--k));font-weight:400;letter-spacing:calc(.6px*var(--k));color:rgba(255,255,255,.45)}
+.clk{position:fixed;right:calc(64px*var(--k));bottom:calc(52px*var(--k));text-align:right;transition:transform .4s ease;text-shadow:0 1px calc(8px*var(--k)) rgba(0,0,0,.7)}
+.clk .t{font-size:calc(30px*var(--k));font-weight:300;letter-spacing:calc(.5px*var(--k));font-variant-numeric:tabular-nums;color:rgba(255,255,255,.85);line-height:1}
+.clk .d{margin-top:calc(6px*var(--k));font-size:calc(13px*var(--k));letter-spacing:calc(.6px*var(--k));color:rgba(255,255,255,.45);text-transform:capitalize}
+.band{position:fixed;left:0;right:0;bottom:0;height:calc(150px*var(--k));padding:0 calc(64px*var(--k));display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.72) 45%);transform:translateY(100%);opacity:0;transition:transform .35s ease,opacity .35s ease}
+body.ui .band{transform:none;opacity:1}
+body.ui .cap,body.ui .clk{transform:translateY(calc(-175px*var(--k)))}
+.grp{display:flex;gap:calc(26px*var(--k));align-items:center}
+.app{all:unset;position:relative;width:calc(76px*var(--k));height:calc(76px*var(--k));border-radius:calc(20px*var(--k));display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.06);border:calc(1.5px*var(--k)) solid rgba(255,255,255,.14);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.app .ico{width:calc(56px*var(--k));height:calc(56px*var(--k));border-radius:calc(15px*var(--k));display:grid;place-items:center;color:#fff}
+.app .ico svg{width:calc(36px*var(--k));height:calc(36px*var(--k))}
+.app .lbl{position:absolute;left:50%;bottom:calc(98px*var(--k));transform:translate(-50%,calc(6px*var(--k)));white-space:nowrap;font-size:calc(20px*var(--k));font-weight:500;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.app .hd{position:absolute;bottom:calc(-20px*var(--k));left:50%;transform:translateX(-50%);white-space:nowrap;font-size:calc(11px*var(--k));font-weight:600;letter-spacing:calc(1.5px*var(--k));color:rgba(255,255,255,.5)}
+.app.on{transform:translateY(calc(-6px*var(--k))) scale(1.08);border-color:var(--or);box-shadow:0 0 calc(24px*var(--k)) rgba(201,168,108,.3)}
+.app.on .lbl{opacity:1;transform:translate(-50%,0)}
+.toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:calc(18px*var(--k)) calc(32px*var(--k));border-radius:calc(16px*var(--k));background:rgba(0,0,0,.7);font-size:calc(24px*var(--k));opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="bg"><div class="scene" id="s0"><canvas width="1920" height="1080"></canvas></div><div class="scene" id="s1"><canvas width="1920" height="1080"></canvas></div></div>
+<div class="shade"></div>
+<div class="cap" id="cap"><b id="ct"></b><small id="cc"></small></div>
+<div class="clk"><div class="t" id="hh"></div><div class="d" id="dd"></div></div>
+<div class="band" id="band"><div class="grp" id="apps"></div><div class="grp" id="hdmi"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+var EH='https://cdn.esahubble.org/archives/images/',EW='https://cdn.esawebb.org/archives/images/publicationjpg/',WM='https://upload.wikimedia.org/wikipedia/commons/';
+var PH=[
+{s:EH+'publicationjpg/heic1509a.jpg',m:'c',f:.5,t:'Westerlund 2',c:'Hubble · NASA, ESA'},
+{s:EW+'weic2205a.jpg',m:'c',f:.5,t:'Les Falaises cosmiques',c:'James Webb · NASA, ESA, CSA'},
+{s:EH+'publicationjpg/heic0601a.jpg',m:'c',f:.5,t:'Nébuleuse d’Orion',c:'Hubble · NASA, ESA'},
+{s:EH+'publicationjpg/heic0707a.jpg',m:'c',f:.5,t:'Nébuleuse de la Carène',c:'Hubble · NASA, ESA'},
+{s:EH+'publicationjpg/heic2007a.jpg',m:'c',f:.5,t:'La Tapisserie',c:'Hubble · NASA, ESA'},
+{s:EH+'publicationjpg/heic1608a.jpg',m:'c',f:.5,t:'Nébuleuse de la Bulle',c:'Hubble · NASA, ESA'},
+{s:EH+'publicationjpg/heic0910h.jpg',m:'c',f:.5,t:'Nébuleuse du Papillon',c:'Hubble · NASA, ESA'},
+{s:WM+"thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA's_Solar_Dynamics_Observatory_-_20100819.jpg/3840px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA's_Solar_Dynamics_Observatory_-_20100819.jpg",m:'p',f:.94,t:'Le Soleil',c:'SDO · NASA'},
+{s:WM+'d/d9/Mercury_in_color_-_Prockter07-edit1.jpg',m:'p',f:.9,t:'Mercure',c:'MESSENGER · NASA'},
+{s:WM+'a/a9/PIA23791-Venus-NewlyProcessedView-20200608.jpg',m:'p',f:.9,t:'Vénus',c:'Mariner 10 · NASA'},
+{s:WM+'9/97/The_Earth_seen_from_Apollo_17.jpg',m:'p',f:.92,t:'La Terre',c:'Apollo 17 · NASA · 1972'},
+{s:WM+'e/e1/FullMoon2010.jpg',m:'p',f:.8,t:'La Lune',c:'G. H. Revera'},
+{s:WM+'0/02/OSIRIS_Mars_true_color.jpg',m:'p',f:.9,t:'Mars',c:'Rosetta · ESA'},
+{s:WM+'5/5c/Phobos_colour_2008.jpg',m:'p',f:.72,t:'Phobos',c:'MRO · NASA'},
+{s:EH+'large/heic1914a.jpg',m:'p',f:.92,t:'Jupiter',c:'Hubble · NASA, ESA · 2019'},
+{s:WM+'7/7b/Io_highest_resolution_true_color.jpg',m:'p',f:.8,t:'Io',c:'Galileo · NASA'},
+{s:WM+'e/e4/Europa-moon-with-margins.jpg',m:'p',f:.76,t:'Europe',c:'Galileo · NASA'},
+{s:WM+'f/f2/Ganymede_g1_true-edit1.jpg',m:'p',f:.7,t:'Ganymède',c:'Galileo · NASA'},
+{s:WM+'thumb/e/e3/Saturn_from_Cassini_Orbiter_(2004-10-06).jpg/3840px-Saturn_from_Cassini_Orbiter_(2004-10-06).jpg',m:'p',f:.94,t:'Saturne',c:'Cassini · NASA'},
+{s:WM+'c/c7/Saturn_during_Equinox.jpg',m:'p',f:.94,t:'Saturne à l’équinoxe',c:'Cassini · NASA · 2009'},
+{s:WM+'8/83/PIA17202_-_Approaching_Enceladus.jpg',m:'p',f:.72,t:'Encelade',c:'Cassini · NASA'},
+{s:WM+'b/bc/Mimas_Cassini.jpg',m:'p',f:.74,t:'Mimas',c:'Cassini · NASA'},
+{s:WM+'thumb/c/c9/Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg/3840px-Iapetus_as_seen_by_the_Cassini_probe_-_20071008.jpg',m:'p',f:.78,t:'Japet',c:'Cassini · NASA'},
+{s:WM+"c/c9/Uranus_as_seen_by_NASA's_Voyager_2_(remastered)_-_JPEG_converted.jpg",m:'p',f:.86,t:'Uranus',c:'Voyager 2 · NASA · 1986'},
+{s:WM+'5/56/Neptune_Full.jpg',m:'p',f:.88,t:'Neptune',c:'Voyager 2 · NASA · 1989'},
+{s:WM+'thumb/a/a6/Triton_moon_mosaic_Voyager_2_(large).jpg/3840px-Triton_moon_mosaic_Voyager_2_(large).jpg',m:'p',f:.78,t:'Triton',c:'Voyager 2 · NASA'},
+{s:WM+'thumb/e/ef/Pluto_in_True_Color_-_High-Res.jpg/3840px-Pluto_in_True_Color_-_High-Res.jpg',m:'p',f:.9,t:'Pluton',c:'New Horizons · NASA · 2015'},
+{s:WM+'2/2e/Charon_in_True_Color_-_High-Res.jpg',m:'p',f:.76,t:'Charon',c:'New Horizons · NASA · 2015'},
+{s:EH+'publicationjpg/opo0328a.jpg',m:'c',f:.5,t:'Galaxie du Sombrero',c:'Hubble · NASA'},
+{s:EH+'publicationjpg/heic0506a.jpg',m:'c',f:.5,t:'Galaxie du Tourbillon',c:'Hubble · NASA, ESA'},
+{s:EH+'publicationjpg/heic0406a.jpg',m:'c',f:.5,t:'Champ ultra-profond',c:'Hubble · NASA, ESA'}];
+var G='fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+var W='M3 20.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1';
+var APPS=[
+ {nm:'Netflix',c:'#c8102e',ic:'<path d="M4.5 10.5L12 5l7.5 5.5"/><path d="M6.5 10v4.5h11V10"/><path d="M10.5 14.5v-2.5h3v2.5"/><path d="M8 14.5v4M16 14.5v4"/><path d="'+W+'"/>'},
+ {nm:'Prime Video',c:'#00a8e1',ic:'<path d="M3 14.5h18l-2.6 4H5.6z"/><path d="M7 14.5v-3h5v3"/><path d="M14 14.5V5.5l4.5 9"/><path d="'+W+'"/>'},
+ {nm:'YouTube',c:'#ff3b30',ic:'<path d="M10 20.5l1-11h2l1 11z"/><path d="M9.3 9.5h5.4"/><path d="M11 6h2v3.5h-2z"/><path d="M12 6V4.5"/><path d="M6.5 5.5l2.5 1.3M17.5 5.5L15 6.8"/><path d="M10.6 14h2.8"/><path d="M5 20.5h14"/>'},
+ {nm:'Arte',c:'#f28c18',ic:'<path d="M3.5 13.5c0-4.3 3.8-7.5 8.5-7.5s8.5 3.2 8.5 7.5c0 2.3-3.8 4.5-8.5 4.5s-8.5-2.2-8.5-4.5z"/><path d="M3.8 13.4c3 1.7 13.4 1.7 16.4 0"/><circle cx="12" cy="11.2" r="1.7"/><path d="M8 8.5c1 1 1.2 2.5 1 4M16 8.5c-1 1-1.2 2.5-1 4"/>'},
+ {nm:'PlayStation',c:'#2f6fe0',hd:'HDMI 1',ic:'<path d="M5 8.5c3-3.4 11-3.4 14 0"/><path d="M5 8.5l7 6 7-6"/><path d="M12 14.5v1.8"/><path d="M2.5 21c3.8-4.6 7.4-5.6 10.3-5.6 2.9 0 6 1.7 8.7 5.6"/>'},
+ {nm:'Switch',c:'#e4000f',hd:'HDMI 4',ic:'<path d="M11 3.5v12.5H4.5z"/><path d="M13 6.5v9.5h5.5z"/><path d="M3 18h18"/><path d="'+W+'"/>'}
+];
+var sel=0,els=[];
+APPS.forEach(function(a,i){var b=document.createElement('button');b.className='app';b.type='button';
+ b.innerHTML='<span class="ico" style="background:'+a.c+'"><svg viewBox="0 0 24 24" '+G+'>'+a.ic+'</svg></span><span class="lbl">'+a.nm+'</span>'+(a.hd?'<span class="hd">'+a.hd+'</span>':'');
+ b.addEventListener('click',function(){if(sel===i)launch();else pick(i);wake();});document.getElementById(a.hd?'hdmi':'apps').appendChild(b);els.push(b);});
+function pick(i){sel=(i+APPS.length)%APPS.length;els.forEach(function(e,k){e.classList.toggle('on',k===sel)});}
+var tt;function toast(m,d){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},d||2200);}
+var TV=(typeof tizen!=='undefined');
+var KEYS={'Netflix':['netflix'],'Prime Video':['prime video','amazon'],'YouTube':['youtube'],'Arte':['arte']};
+var IDS={'Netflix':'3201907018807','Prime Video':'3201910019365','YouTube':'111299001912'};
+function launch(){var a=APPS[sel];
+ if(!TV){toast(a.hd?'Passage sur '+a.hd+' — '+a.nm:'Ouverture de '+a.nm+'…');return;}
+ if(a.hd){toast('Pour '+a.nm+' : bouton Source puis '+a.hd,4000);return;}
+ if(IDS[a.nm]){toast('Ouverture de '+a.nm+'…');try{tizen.application.launch(IDS[a.nm],null,function(){findAndLaunch(a);});}catch(e){findAndLaunch(a);}return;}
+ findAndLaunch(a);}
+function findAndLaunch(a){
+ try{tizen.application.getAppsInfo(function(list){var ks=KEYS[a.nm]||[a.nm.toLowerCase()],hit=null;
+   list.forEach(function(x){var n=(x.name||'').toLowerCase();if(!hit&&ks.some(function(k){return n.indexOf(k)>-1;}))hit=x;});
+   if(!hit){toast(a.nm+' introuvable sur la télé',3000);return;}
+   toast('Ouverture de '+a.nm+'…');tizen.application.launch(hit.id,null,function(e){toast(a.nm+' : '+e.message,4000);});
+  },function(e){toast(a.nm+' : '+e.message,4000);});}
+ catch(e){toast('Lancement impossible : '+e.message,4000);}}
+var hideT;function wake(){document.body.classList.add('ui');clearTimeout(hideT);hideT=setTimeout(function(){document.body.classList.remove('ui')},8000);}
+function key(k){var ui=document.body.classList.contains('ui');
+ if(!ui){if(k==='ArrowRight'){go(1);return;}if(k==='ArrowLeft'){go(-1);return;}wake();return;}
+ wake();if(k==='ArrowRight')pick(sel+1);else if(k==='ArrowLeft')pick(sel-1);else if(k==='Enter')launch();else if(k==='ArrowDown'||k==='Escape'){document.body.classList.remove('ui');}}
+try{if(TV)['MediaPlayPause','ChannelUp','ChannelDown'].forEach(function(k){try{tizen.tvinputdevice.registerKey(k);}catch(e){}});}catch(e){}
+document.addEventListener('keydown',function(e){
+ if(e.keyCode===10009){if(document.body.classList.contains('ui'))document.body.classList.remove('ui');else{try{tizen.application.getCurrentApplication().exit();}catch(x){}}e.preventDefault();return;}
+ if(e.keyCode===427){go(1);e.preventDefault();return;}if(e.keyCode===428){go(-1);e.preventDefault();return;}
+ var m={37:'ArrowLeft',38:'ArrowUp',39:'ArrowRight',40:'ArrowDown',13:'Enter',27:'Escape'}[e.keyCode];if(m){key(m);e.preventDefault();}});
+document.addEventListener('mousemove',function(e){if(e.clientY>innerHeight*.75)wake();});
+function fit(){document.documentElement.style.setProperty('--k',Math.min(innerWidth/1920,innerHeight/1080));}
+addEventListener('resize',fit);fit();
+var scn=[document.getElementById('s0'),document.getElementById('s1')],cur=-1,lay=0,timer,fails=0,busy=false,cache={};
+function bbox(img){var s=400/Math.max(img.width,img.height),w=Math.round(img.width*s),h=Math.round(img.height*s),c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.drawImage(img,0,0,w,h);var d=x.getImageData(0,0,w,h).data,x0=w,y0=h,x1=0,y1=0;for(var y=0;y<h;y++)for(var X=0;X<w;X++){var i=(y*w+X)*4;if(d[i]*.3+d[i+1]*.59+d[i+2]*.11>28){if(X<x0)x0=X;if(X>x1)x1=X;if(y<y0)y0=y;if(y>y1)y1=y;}}return [x0/s,y0/s,(x1+1)/s,(y1+1)/s];}
+function load(n,cb){if(cache[n]){cb(cache[n]);return;}var im=new Image();im.crossOrigin='anonymous';im.onload=function(){cache[n]=im;cb(im);};im.onerror=function(){cb(null);};im.src=PH[n].s;}
+function paint(cv,p,img){var W=cv.width,H=cv.height,x=cv.getContext('2d');x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.fillStyle='#000';x.fillRect(0,0,W,H);x.imageSmoothingQuality='high';
+ if(p.m==='c'){var s=Math.max(W/img.width,H/img.height),dw=img.width*s,dh=img.height*s;x.drawImage(img,(W-dw)/2,(H-dh)*p.f,dw,dh);return;}
+ var b=bbox(img),bw=b[2]-b[0],bh=b[3]-b[1],f=Math.min(p.f,bh*1.1/2160),s=Math.min(f*H/bh,0.94*W/bw),pad=0.05*Math.max(bw,bh);
+ var sx=Math.max(0,b[0]-pad),sy=Math.max(0,b[1]-pad),sw=Math.min(img.width,b[2]+pad)-sx,sh=Math.min(img.height,b[3]+pad)-sy;
+ var t=document.createElement('canvas');t.width=Math.max(1,Math.round(sw*s));t.height=Math.max(1,Math.round(sh*s));var tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(img,sx,sy,sw,sh,0,0,t.width,t.height);
+ tx.globalCompositeOperation='destination-in';var ox=(b[0]-sx)*s,oy=(b[1]-sy)*s,cx=ox+bw*s/2,cy=oy+bh*s/2,rx=(bw*s)/2+pad*s*.85,ry=(bh*s)/2+pad*s*.85;tx.save();tx.translate(cx,cy);tx.scale(1,ry/rx);var g=tx.createRadialGradient(0,0,rx*0.92,0,0,rx);g.addColorStop(0,'#000');g.addColorStop(1,'rgba(0,0,0,0)');tx.fillStyle=g;tx.fillRect(-4*rx,-4*rx,8*rx,8*rx);tx.restore();
+ x.drawImage(t,W/2-cx,H/2-cy);}
+function show(n){n=(n+PH.length)%PH.length;if(busy)return;busy=true;var p=PH[n],L=scn[lay^1];
+ load(n,function(img){busy=false;if(!img){cur=n;if(++fails<PH.length)show(n+1);return;}
+  try{paint(L.querySelector('canvas'),p,img);}catch(e){cur=n;if(++fails<PH.length)show(n+1);return;}
+  L.className='scene'+(n%2?' alt':'');void L.offsetWidth;L.classList.add('on');scn[lay].classList.remove('on');lay^=1;cur=n;fails=0;cap(p);
+  var k=(n+1)%PH.length;for(var j in cache){if(+j!==n&&+j!==k)delete cache[j];}load(k,function(){});});}
+function cap(p){var c=document.getElementById('cap');c.classList.add('hide');setTimeout(function(){document.getElementById('ct').textContent=p.t;document.getElementById('cc').textContent=p.c;c.classList.remove('hide');},900);}
+function go(d){clearInterval(timer);show(cur+d);timer=setInterval(function(){show(cur+1)},16000);}
+go(1);
+function tick(){var d=new Date();document.getElementById('hh').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+ document.getElementById('dd').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});}
+tick();setInterval(tick,15000);pick(0);
+</script>
+</body>
+</html>
