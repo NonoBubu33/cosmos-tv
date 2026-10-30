@@ -129,7 +129,7 @@ var launching=false;
 function launch(){if(launching)return;launching=true;var a=els[sel].a,v=$('veil');store('cosmos.app',sel);v.textContent=a.nm;v.className='veil on';
  var hd=/^source\/hdmi/.test(a.go),tries=0,end=function(){launching=false};
  var attempt=function(){tries++;call(a.go,function(){store('cosmos.ret',Date.now());setTimeout(function(){v.className='veil';ui(false);end()},2500)},
-  function(err,reached){if(!reached&&tries<2){v.textContent=a.nm+' ne répond pas, nouvel essai…';setTimeout(attempt,1500);return;}
+  function(err,reached){if(!reached&&tries<3){if(tries===1)revive();v.textContent='Préparation de '+a.nm+'…';setTimeout(attempt,Math.max(4500,8000-(Date.now()-T0)+3000));return;}
    v.className='veil';end();
    if(!reached){svcDown();return;}
    toast(hd?'Allume la manette '+a.nm+' : la télé bascule toute seule':a.nm+' : '+err,7000);})};attempt();}
@@ -140,12 +140,14 @@ function tbAsk(cb){var out={},fin=false,end=function(){if(fin)return;fin=true;tr
  w.onopen=function(){w.send(JSON.stringify({type:7}));w.send(JSON.stringify({type:4}))};
  w.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type===7)out.st=m.payload;if(m.type===4)out.mods=m.payload}catch(x){}if(out.st&&out.mods)end()};
  w.onerror=function(){out.err='TizenBrew injoignable';end()};setTimeout(end,4000);}
-function revive(){tbAsk(function(o){var mine=null,st=null;(o.mods||[]).forEach(function(m){if(m.serviceFile&&/cosmos/i.test(m.fullName||m.name||''))mine=m});
- (o.st||[]).forEach(function(x){if(mine&&x.name===mine.fullName)st=x});
- TBST=(o.err?o.err+' · ':'')+'services: '+JSON.stringify(o.st||[]).slice(0,300)+' · module: '+(mine?mine.fullName:'introuvable');
- if(mine&&(!st||st.hasCrashed)){try{var w=new WebSocket('ws://127.0.0.1:8081');w.onopen=function(){w.send(JSON.stringify({type:6,payload:mine}));setTimeout(function(){try{w.close()}catch(e){}},1500)}}catch(e){}TBST+=' · relancé';}});}
-var pingT=null,downN=0;function svcDown(){downN++;toast(downN<2?'Raccourcis indisponibles, redémarrage du service…':'Raccourcis indisponibles — nouvel essai…',6000);if(downN<=3)revive();clearTimeout(pingT);pingT=setTimeout(ping,downN<3?8000:30000);}
-function ping(){var px=new XMLHttpRequest();px.open('GET',SVC+'ping');px.timeout=4000;px.onload=function(){clearTimeout(pingT);if(downN){downN=0;toast('Raccourcis prêts',2500)}};px.onerror=px.ontimeout=svcDown;px.send();}
+/* Relance de secours : demande à TizenBrew de démarrer directement le cœur du service (core.js, version figée et testée). */
+var CORE={fullName:'gh/NonoBubu33/cosmos-tv@2f0e208',name:'cosmos-core',serviceFile:'core.js',appName:'Cosmos'};
+var T0=Date.now();
+function revive(){if(Date.now()-T0<8000){setTimeout(revive,8000-(Date.now()-T0));return;}tbAsk(function(o){var st=null;(o.st||[]).forEach(function(x){if(x.name===CORE.fullName)st=x});
+ TBST=(o.err?o.err+' · ':'')+'services: '+JSON.stringify(o.st||[]).slice(0,300);
+ if(!st||st.hasCrashed){try{var w=new WebSocket('ws://127.0.0.1:8081');w.onopen=function(){w.send(JSON.stringify({type:6,payload:CORE}));setTimeout(function(){try{w.close()}catch(e){}},1500)}}catch(e){}TBST+=' · relancé';}});}
+var pingT=null,downN=0;function svcDown(quiet){downN++;if(!quiet)toast(downN<3?'Préparation des raccourcis… réessaie dans quelques secondes':'Raccourcis indisponibles — touche rouge pour le diagnostic',6000);if(downN>=2&&downN<=5)revive();clearTimeout(pingT);pingT=setTimeout(ping,downN<5?4500:30000);}
+function ping(){var px=new XMLHttpRequest();px.open('GET',SVC+'ping');px.timeout=4000;px.onload=function(){clearTimeout(pingT);if(downN){downN=0;toast('Raccourcis prêts',2500)}};px.onerror=px.ontimeout=function(){svcDown(downN<2)};px.send();}
 /* ---------- Diagnostic (touche rouge) ---------- */
 function diag(){var d=$('diag');if(d.className==='diag on'){d.className='diag';return;}d.textContent='Chargement…';d.className='diag on';
  var x=new XMLHttpRequest();x.open('GET',SVC+'apps');x.timeout=6000;x.onload=function(){try{var r=JSON.parse(x.responseText);d.textContent='Applis installées :\n'+r.map(function(a){return a.name+'  ('+a.id+')'}).join('\n')}catch(e){d.textContent='Erreur'}};
