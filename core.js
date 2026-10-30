@@ -68,30 +68,64 @@ function stopWatch() {
   if (pend) { clearTimeout(pend); pend = null; }
   watched = null;
 }
-// Retour automatique : l'appli lancée passe en arrière-plan (Retour, sortie) ou se ferme → on relance Cosmos.
-// Rien pendant les 5 premières secondes, et on attend 1,5 s pour ignorer les désactivations brèves (profils, pubs).
+// API locale de la télé (port 8001) : état des applis et télécommande virtuelle.
+function rest(method, path, cb) {
+  try {
+    var r = http.request({ host: '127.0.0.1', port: 8001, path: '/api/v2/' + path, method: method, headers: { 'Content-Length': 0 } }, function (res) {
+      var d = ''; res.on('data', function (x) { d += x; });
+      res.on('end', function () { var j = null; try { j = JSON.parse(d); } catch (e) {} cb(null, j, res.statusCode); });
+    });
+    r.on('error', function (e) { cb(e); });
+    r.setTimeout(3000, function () { try { r.abort(); } catch (e) {} });
+    r.end();
+  } catch (e) { cb(e); }
+}
+// Retour automatique : quand l'appli lancée est réellement fermée (Retour jusqu'à la sortie, Retour long), on relance Cosmos.
+// Si elle est seulement cachée (touche Maison), on ne force rien : l'accueil Samsung reste accessible.
 function watch(id) {
   stopWatch(); watched = id; since = Date.now();
-  try {
-    lsn = tizen.application.addAppStatusChangeListener(function (appId, status) {
-      if (appId !== watched || status !== 'DEACTIVATE' || Date.now() - since < 5000) return;
-      if (pend) clearTimeout(pend);
-      pend = setTimeout(function () { pend = null; back('désactivée'); }, 1500);
-    }, id);
-    log('surveillance ' + id + ' (écoute OK)');
-  } catch (e) { lsn = null; log('surveillance ' + id + ' : écoute KO ' + e.message); }
-  var seen = false, ticks = 0;
+  var seen = false, ticks = 0, lastState = '';
+  log('surveillance ' + id);
   watchT = setInterval(function () {
-    try {
-      tizen.application.getAppsContext(function (ctx) {
-        var running = false;
-        for (var i = 0; i < ctx.length; i++) if (ctx[i].appId === id) running = true;
-        ticks++;
-        if (running) { if (!seen) log('en cours : ' + id + ' (' + ctx.length + ' applis)'); seen = true; return; }
-        if (seen) back('fermée'); else if (ticks === 20) log('jamais vue en cours : ' + id);
-      }, function (e) { if (ticks++ % 40 === 0) log('contexte KO ' + e.message); });
-    } catch (e) { if (ticks++ % 40 === 0) log('contexte KO ' + e.message); }
-  }, 500);
+    ticks++;
+    rest('GET', 'applications/' + id, function (err, j) {
+      if (watched !== id) return;
+      if (err || !j) { if (ticks % 30 === 1) log('état appli KO ' + (err ? err.message : 'vide')); return; }
+      var st = (j.running ? 'R' : '-') + (j.visible ? 'V' : '-');
+      if (st !== lastState) { log('état ' + id + ' ' + st); lastState = st; }
+      if (j.running && j.visible) { seen = true; return; }
+      if (seen && !j.running) back('fermée');
+    });
+    if (ticks > 21600) stopWatch();
+  }, 1000);
+}
+// Télécommande virtuelle (même canal que l'appli SmartThings) : la 1re fois, la télé demande d'autoriser « Cosmos ».
+var TOKEN = null, TOKF = '/home/owner/share/cosmos-token.txt';
+try { TOKEN = fs.readFileSync(TOKF, 'utf8').trim() || null; } catch (e) {}
+function wsLib() { var n = ['ws-old', 'ws-new', 'ws']; for (var i = 0; i < n.length; i++) { try { return require(n[i]); } catch (e) {} } return null; }
+function sendKey(key, cb) {
+  var WS = wsLib(); if (!WS) { cb('module ws absent'); return; }
+  var name = new Buffer('Cosmos').toString('base64');
+  var urls = ['wss://127.0.0.1:8002/api/v2/channels/samsung.remote.control?name=' + name + (TOKEN ? '&token=' + TOKEN : ''),
+              'ws://127.0.0.1:8001/api/v2/channels/samsung.remote.control?name=' + name];
+  var lastErr = '';
+  (function next(i) {
+    if (i >= urls.length) { cb(lastErr || 'télécommande indisponible'); return; }
+    var done = false, w;
+    var fin = function (ok, why) { if (done) return; done = true; clearTimeout(t); try { w.close(); } catch (e) {} if (ok) cb(null); else { lastErr = why; if (why === 'refusé') cb('autorisation refusée sur la télé'); else next(i + 1); } };
+    var t = setTimeout(function () { fin(false, 'délai dépassé'); }, TOKEN ? 6000 : 30000);
+    try { w = new WS(urls[i], { rejectUnauthorized: false }); } catch (e) { fin(false, e.message); return; }
+    w.on('message', function (m) {
+      var j = {}; try { j = JSON.parse(m); } catch (e) {}
+      if (j.event === 'ms.channel.connect') {
+        if (j.data && j.data.token) { TOKEN = j.data.token; try { fs.writeFileSync(TOKF, TOKEN); } catch (e) {} }
+        try { w.send(JSON.stringify({ method: 'ms.remote.control', params: { Cmd: 'Click', DataOfCmd: key, Option: 'false', TypeOfRemote: 'SendRemoteKey' } })); } catch (e) { fin(false, e.message); return; }
+        log('touche ' + key + ' envoyée (' + (i === 0 ? '8002' : '8001') + ')');
+        setTimeout(function () { fin(true); }, 500);
+      } else if (j.event === 'ms.channel.unauthorized') fin(false, 'refusé');
+    });
+    w.on('error', function (e) { fin(false, e && e.message); });
+  })(0);
 }
 function launchId(id, res) {
   try {
@@ -101,6 +135,9 @@ function launchId(id, res) {
   } catch (e) { send(res, 500, { ok: false, error: e.message }); }
 }
 function openSettings(res) {
+  sendKey('KEY_MENU', function (err) { if (!err) { send(res, 200, { ok: true }); return; } log('menu par touche KO : ' + err); openSettingsApp(res); });
+}
+function openSettingsApp(res) {
   var pre = null; try { tizen.application.getAppInfo('com.samsung.tv.coba.setting'); pre = 'com.samsung.tv.coba.setting'; } catch (e) {}
   if (pre) { launchId(pre, res); return; }
   find('settings', function (id) {
@@ -147,17 +184,12 @@ http.createServer(function (req, res) {
     return;
   }
   if (a === 'source' && b) {
-    var num = parseInt(p[3] || '1', 10), typ = b.toUpperCase();
-    var viaWindow = function () {
-      try {
-        tizen.tvwindow.setSource({ type: typ, number: num }, function () { send(res, 200, { ok: true }); },
-          function (e) { srcFail(res, e.message); }, 'MAIN');
-      } catch (e) { srcFail(res, e.message); }
-    };
-    if (typ === 'TV') find('tv', function (id) { if (id) launchId(id, res); else viaWindow(); });
-    else viaWindow();
+    var num = parseInt(p[3] || '1', 10), key = b === 'tv' ? 'KEY_TV' : 'KEY_HDMI' + num;
+    stopWatch();
+    sendKey(key, function (err) { if (err) send(res, 500, { ok: false, error: err }); else send(res, 200, { ok: true }); });
     return;
   }
+  if (a === 'key' && b) { sendKey(p[2], function (err) { send(res, err ? 500 : 200, { ok: !err, error: err }); }); return; }
   send(res, 404, { error: 'inconnu' });
 }).on('error', function (e) { log('serveur : ' + e.message); }).listen(8097, '127.0.0.1');
 listApps(function () {});
