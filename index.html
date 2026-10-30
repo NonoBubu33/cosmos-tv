@@ -99,26 +99,19 @@ APPS.forEach(function(a,i){var b=document.createElement('button');b.className='a
  b.addEventListener('click',function(){if(sel===i)launch();else pick(i);wake();});document.getElementById(a.hd?'hdmi':'apps').appendChild(b);els.push(b);});
 function pick(i){sel=(i+APPS.length)%APPS.length;els.forEach(function(e,k){e.classList.toggle('on',k===sel)});}
 var tt;function toast(m,d){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},d||2200);}
-var TV=(typeof tizen!=='undefined');
-var KEYS={'Netflix':['netflix'],'Prime Video':['prime video','amazon'],'YouTube':['youtube'],'Arte':['arte']};
-var IDS={'Netflix':'3201907018807','Prime Video':'3201910019365','YouTube':'111299001912'};
+var KEY={'Netflix':'netflix','Prime Video':'prime','YouTube':'youtube','Arte':'arte'};
 function launch(){var a=APPS[sel];
- if(!TV){toast(a.hd?'Passage sur '+a.hd+' — '+a.nm:'Ouverture de '+a.nm+'…');return;}
  if(a.hd){toast('Pour '+a.nm+' : bouton Source puis '+a.hd,4000);return;}
- if(IDS[a.nm]){toast('Ouverture de '+a.nm+'…');try{tizen.application.launch(IDS[a.nm],null,function(){findAndLaunch(a);});}catch(e){findAndLaunch(a);}return;}
- findAndLaunch(a);}
-function findAndLaunch(a){
- try{tizen.application.getAppsInfo(function(list){var ks=KEYS[a.nm]||[a.nm.toLowerCase()],hit=null;
-   list.forEach(function(x){var n=(x.name||'').toLowerCase();if(!hit&&ks.some(function(k){return n.indexOf(k)>-1;}))hit=x;});
-   if(!hit){toast(a.nm+' introuvable sur la télé',3000);return;}
-   toast('Ouverture de '+a.nm+'…');tizen.application.launch(hit.id,null,function(e){toast(a.nm+' : '+e.message,4000);});
-  },function(e){toast(a.nm+' : '+e.message,4000);});}
- catch(e){toast('Lancement impossible : '+e.message,4000);}}
+ toast('Ouverture de '+a.nm+'…',4000);
+ var x=new XMLHttpRequest();x.open('GET','http://127.0.0.1:8097/launch/'+KEY[a.nm]);x.timeout=8000;
+ x.onload=function(){var r={};try{r=JSON.parse(x.responseText);}catch(e){}if(!r.ok)toast(a.nm+' : '+(r.error||'erreur '+x.status),5000);};
+ x.onerror=x.ontimeout=function(){toast('Service Cosmos non démarré — relance Cosmos depuis TizenBrew',5000);};
+ x.send();}
 var hideT;function wake(){document.body.classList.add('ui');clearTimeout(hideT);hideT=setTimeout(function(){document.body.classList.remove('ui')},8000);}
 function key(k){var ui=document.body.classList.contains('ui');
  if(!ui){if(k==='ArrowRight'){go(1);return;}if(k==='ArrowLeft'){go(-1);return;}wake();return;}
  wake();if(k==='ArrowRight')pick(sel+1);else if(k==='ArrowLeft')pick(sel-1);else if(k==='Enter')launch();else if(k==='ArrowDown'||k==='Escape'){document.body.classList.remove('ui');}}
-try{if(TV)['MediaPlayPause','ChannelUp','ChannelDown'].forEach(function(k){try{tizen.tvinputdevice.registerKey(k);}catch(e){}});}catch(e){}
+try{if(typeof tizen!=='undefined')['MediaPlayPause','ChannelUp','ChannelDown'].forEach(function(k){try{tizen.tvinputdevice.registerKey(k);}catch(e){}});}catch(e){}
 document.addEventListener('keydown',function(e){
  if(e.keyCode===10009){if(document.body.classList.contains('ui'))document.body.classList.remove('ui');else{try{tizen.application.getCurrentApplication().exit();}catch(x){}}e.preventDefault();return;}
  if(e.keyCode===427){go(1);e.preventDefault();return;}if(e.keyCode===428){go(-1);e.preventDefault();return;}
