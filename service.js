@@ -17,8 +17,31 @@ function listApps(ok, ko) {
   try { tizen.application.getAppsInfo(function (l) { ok(l.map(function (a) { return { id: a.id, name: a.name }; })); }, function (e) { ko(e.message); }); }
   catch (e) { ko(e.message); }
 }
+// Retour automatique sur Cosmos quand l'appli lancée se ferme (Retour dans Netflix, etc.).
+// Si l'utilisateur appuie sur Home, l'appli reste ouverte en arrière-plan : pas de retour forcé.
+var watchT = null;
+function tbApp() { try { return tizen.application.getAppInfo().packageId + '.TizenBrewStandalone'; } catch (e) { return null; } }
+function watch(id) {
+  if (watchT) clearInterval(watchT);
+  var seen = false, n = 0;
+  watchT = setInterval(function () {
+    n++;
+    if (n > 7200) { clearInterval(watchT); watchT = null; return; }
+    try {
+      tizen.application.getAppsContext(function (ctx) {
+        var running = ctx.some(function (c) { return c.appId === id; });
+        if (running) { seen = true; return; }
+        if (seen) {
+          clearInterval(watchT); watchT = null;
+          var tb = tbApp();
+          if (tb) { try { tizen.application.launch(tb); } catch (e) {} }
+        }
+      });
+    } catch (e) {}
+  }, 1500);
+}
 function launchId(id, res) {
-  try { tizen.application.launch(id, function () { send(res, 200, { ok: true, id: id }); }, function (e) { send(res, 500, { ok: false, id: id, error: e.message }); }); }
+  try { tizen.application.launch(id, function () { watch(id); send(res, 200, { ok: true, id: id }); }, function (e) { send(res, 500, { ok: false, id: id, error: e.message }); }); }
   catch (e) { send(res, 500, { ok: false, id: id, error: e.message }); }
 }
 http.createServer(function (req, res) {
