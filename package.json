@@ -1,1 +1,1 @@
-{"name":"cosmos-tv","version":"2.0.0","description":"Écran d'accueil Cosmos pour TizenBrew","packageType":"app","appName":"Cosmos","appPath":"index.html","serviceFile":"service.js","keys":["MediaPlayPause","ChannelUp","ChannelDown","ColorF0Red"]}
+{"name":"cosmos-tv","version":"2.1.0","description":"Écran d'accueil Cosmos pour TizenBrew","packageType":"app","appName":"Cosmos","appPath":"index.html","serviceFile":"service.js","keys":["MediaPlayPause","ChannelUp","ChannelDown","ColorF0Red"]}

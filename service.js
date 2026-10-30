@@ -1,154 +1,23 @@
-// Service Cosmos 2 (TizenBrew) : lance les applis / sources de la télé et ramène sur Cosmos quand on quitte une appli.
-var http = require('http');
-var fs = require('fs');
-var CAND = {
-  netflix: ['3201907018807', '11101200001'],
-  prime: ['3201910019365', '3201910019354', '3201512006785', 'org.tizen.primevideo'],
-  youtube: ['111299001912', '3201906018693'],
-  settings: ['com.samsung.tv.menu', 'org.tizen.setting', 'com.samsung.tv.settings', 'com.samsung.tv.quick-settings']
-};
-var NAMES = {
-  netflix: ['netflix'],
-  prime: ['prime video', 'amazon prime', 'prime', 'amazon'],
-  youtube: ['youtube'],
-  settings: ['paramètres', 'parametres', 'réglages', 'settings']
-};
-var EXACT = {
-  tv: ['tv', 'live tv', 'tv en direct', 'télévision', 'television', 'tv viewer']
-};
-var APPS = null, KNOWN = {};
-function send(res, code, obj) {
-  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-  res.end(JSON.stringify(obj));
+// Service Cosmos 2 — chargeur : télécharge la dernière version du cœur (core.js) sur GitHub,
+// sinon utilise la dernière copie enregistrée, sinon la copie intégrée ci-dessous.
+var CORE_URL = 'https://raw.githubusercontent.com/NonoBubu33/cosmos-tv/main/core.js';
+var CACHE = '/home/owner/share/cosmos-core.js';
+var started = false;
+function run(code, from) {
+  if (started) return; started = true;
+  try { eval(code + "\nlog('cœur chargé : " + from + "');"); } catch (e) { started = false; if (from !== 'intégré') run(EMBED, 'intégré'); }
 }
-function listApps(cb) {
-  if (APPS) { cb(APPS); return; }
+var EMBED = "// C\u0153ur du service Cosmos 2 (TizenBrew) : lance les applis / sources de la t\u00e9l\u00e9 et ram\u00e8ne sur Cosmos quand on quitte une appli.\nvar http = require('http');\nvar fs = require('fs');\nvar CAND = {\n  netflix: ['3201907018807', '11101200001'],\n  prime: ['3201910019365', '3201910019354', '3201512006785', 'org.tizen.primevideo'],\n  youtube: ['111299001912', '3201906018693'],\n  settings: ['com.samsung.tv.coba.setting', 'com.samsung.tv.menu', 'org.tizen.setting', 'com.samsung.tv.settings', 'com.samsung.tv.quick-settings']\n};\nvar NAMES = {\n  netflix: ['netflix'],\n  prime: ['prime video', 'amazon prime', 'prime', 'amazon'],\n  youtube: ['youtube'],\n  settings: ['param\u00e8tres', 'parametres', 'r\u00e9glages', 'settings']\n};\nvar EXACT = {\n  tv: ['tv', 'live tv', 'tv en direct', 't\u00e9l\u00e9vision', 'television', 'tv viewer']\n};\nvar APPS = null, KNOWN = {};\nfunction send(res, code, obj) {\n  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });\n  res.end(JSON.stringify(obj));\n}\nfunction listApps(cb) {\n  if (APPS) { cb(APPS); return; }\n  try {\n    tizen.application.getAppsInfo(function (l) { APPS = l.map(function (a) { return { id: a.id, name: a.name || '' }; }); cb(APPS); }, function () { cb([]); });\n  } catch (e) { cb([]); }\n}\n// Trouve l'identifiant d'une appli : d'abord par son nom (ordre de pr\u00e9f\u00e9rence), puis par identifiants connus.\nfunction find(w, cb) {\n  if (KNOWN[w]) { cb(KNOWN[w]); return; }\n  listApps(function (l) {\n    var names = NAMES[w] || [w], hit = null, dum = null;\n    var ex = EXACT[w];\n    if (ex) { for (var x = 0; x < l.length && !hit; x++) if (ex.indexOf(l[x].name.toLowerCase().trim()) > -1) hit = l[x].id; names = []; }\n    for (var i = 0; i < names.length && !hit; i++) {\n      for (var j = 0; j < l.length; j++) {\n        var n = l[j].name.toLowerCase();\n        if (n.indexOf(names[i]) > -1 && n.indexOf('tizenbrew') < 0) { if (/dummy/i.test(l[j].id)) { dum = dum || l[j].id; continue; } hit = l[j].id; break; }\n      }\n    }\n    if (!hit) {\n      var c = CAND[w] || [];\n      for (var k = 0; k < c.length && !hit; k++) { try { tizen.application.getAppInfo(c[k]); hit = c[k]; } catch (e) {} }\n    }\n    if (hit) KNOWN[w] = hit;\n    cb(hit || dum);\n  });\n}\n// Retour automatique sur Cosmos : d\u00e8s que l'appli lanc\u00e9e n'est plus au premier plan ni en cours, on relance TizenBrew (Cosmos).\n// Bouton Home : l'appli reste en arri\u00e8re-plan, donc pas de retour forc\u00e9.\nvar watchT = null, lsn = null, watched = null, since = 0, pend = null;\nvar LOG = [];\nfunction log(m) { var d = new Date(); LOG.push(d.toTimeString().slice(0, 8) + ' ' + m); if (LOG.length > 40) LOG.shift(); }\n// Journal de toutes les activations (sert \u00e0 r\u00e9gler le retour apr\u00e8s le premier test sur la t\u00e9l\u00e9).\ntry { tizen.application.addAppStatusChangeListener(function (appId, st) { log(st + ' ' + appId); if (st === 'ACTIVATE' && appId === watched && pend) { clearTimeout(pend); pend = null; log('retour annul\u00e9 (appli revenue)'); } }); } catch (e) { log('listener global KO ' + e.message); }\nfunction tbApp() { try { return tizen.application.getAppInfo().packageId + '.TizenBrewStandalone'; } catch (e) { return null; } }\nfunction back(why) {\n  stopWatch();\n  var tb = tbApp();\n  log('retour Cosmos (' + why + ')');\n  if (tb) { try { tizen.application.launch(tb); } catch (e) { log('relance KO ' + e.message); } }\n}\nfunction stopWatch() {\n  if (watchT) { clearInterval(watchT); watchT = null; }\n  if (lsn !== null) { try { tizen.application.removeAppStatusChangeListener(lsn); } catch (e) {} lsn = null; }\n  if (pend) { clearTimeout(pend); pend = null; }\n  watched = null;\n}\n// Retour automatique : l'appli lanc\u00e9e passe en arri\u00e8re-plan (Retour, sortie) ou se ferme \u2192 on relance Cosmos.\n// Rien pendant les 5 premi\u00e8res secondes, et on attend 1,5 s pour ignorer les d\u00e9sactivations br\u00e8ves (profils, pubs).\nfunction watch(id) {\n  stopWatch(); watched = id; since = Date.now();\n  try {\n    lsn = tizen.application.addAppStatusChangeListener(function (appId, status) {\n      if (appId !== watched || status !== 'DEACTIVATE' || Date.now() - since < 5000) return;\n      if (pend) clearTimeout(pend);\n      pend = setTimeout(function () { pend = null; back('d\u00e9sactiv\u00e9e'); }, 1500);\n    }, id);\n    log('surveillance ' + id + ' (\u00e9coute OK)');\n  } catch (e) { lsn = null; log('surveillance ' + id + ' : \u00e9coute KO ' + e.message); }\n  var seen = false, ticks = 0;\n  watchT = setInterval(function () {\n    try {\n      tizen.application.getAppsContext(function (ctx) {\n        var running = false;\n        for (var i = 0; i < ctx.length; i++) if (ctx[i].appId === id) running = true;\n        ticks++;\n        if (running) { if (!seen) log('en cours : ' + id + ' (' + ctx.length + ' applis)'); seen = true; return; }\n        if (seen) back('ferm\u00e9e'); else if (ticks === 20) log('jamais vue en cours : ' + id);\n      }, function (e) { if (ticks++ % 40 === 0) log('contexte KO ' + e.message); });\n    } catch (e) { if (ticks++ % 40 === 0) log('contexte KO ' + e.message); }\n  }, 500);\n}\nfunction launchId(id, res) {\n  try {\n    log('lancement ' + id);\n    tizen.application.launch(id, function () { watch(id); send(res, 200, { ok: true, id: id }); },\n      function (e) { send(res, 500, { ok: false, error: e.message }); });\n  } catch (e) { send(res, 500, { ok: false, error: e.message }); }\n}\nfunction openSettings(res) {\n  var pre = null; try { tizen.application.getAppInfo('com.samsung.tv.coba.setting'); pre = 'com.samsung.tv.coba.setting'; } catch (e) {}\n  if (pre) { launchId(pre, res); return; }\n  find('settings', function (id) {\n    if (id) { launchId(id, res); return; }\n    try {\n      var ac = new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/setting');\n      tizen.application.launchAppControl(ac, null, function () { send(res, 200, { ok: true }); },\n        function (e) { send(res, 500, { ok: false, error: 'r\u00e9glages indisponibles \u2014 bouton Maison' }); });\n    } catch (e) { send(res, 500, { ok: false, error: 'r\u00e9glages indisponibles \u2014 bouton Maison' }); }\n  });\n}\nfunction srcFail(res, m) {\n  listApps(function (l) {\n    var c = l.filter(function (x) { return /tv|source|hdmi|live|channel|cha[i\u00ee]ne/i.test(x.name + ' ' + x.id); }).slice(0, 6).map(function (x) { return x.name; });\n    send(res, 500, { ok: false, error: 'bascule impossible (' + m + ')' + (c.length ? ' \u2014 touche rouge : diagnostic' : '') });\n  });\n}\nhttp.createServer(function (req, res) {\n  var p = decodeURIComponent(req.url.split('?')[0]).split('/');\n  var a = p[1], b = (p[2] || '').toLowerCase();\n  if (a === 'ping') { send(res, 200, { ok: true }); return; }\n  if (a === 'apps') { APPS = null; listApps(function (l) { var f = b === 'all' ? l : l.filter(function (x) { return /tv|channel|epg|hdmi|source|setting|netflix|prime|youtube|disney|canal|plus|live|vod|player|viewer/i.test(x.name + ' ' + x.id); }); send(res, 200, [{ name: '\u00bb Cosmos (retour) = ' + tbApp(), id: 'self' }].concat(LOG.map(function (m) { return { name: '\u00bb ' + m, id: 'log' }; }), [{ name: '\u2014 applis utiles (' + f.length + '/' + l.length + ') \u2014', id: '' }], f)); }); return; }\n  if (a === 'settings') { openSettings(res); return; }\n  if (a === 'launch' && b) {\n    find(b, function (id) {\n      if (id && /dummy/i.test(id)) { send(res, 404, { ok: false, error: 'pas install\u00e9e sur la t\u00e9l\u00e9 \u2014 installe-la depuis Applis' }); return; }\n      if (id) launchId(id, res); else send(res, 404, { ok: false, error: 'appli non install\u00e9e' });\n    });\n    return;\n  }\n  if (a === 'icon' && b) {\n    find(b, function (id) {\n      if (!id) { send(res, 404, { error: 'introuvable' }); return; }\n      try {\n        var f = String(tizen.application.getAppInfo(id).iconPath || '').replace(/^file:\\/\\//, '');\n        fs.readFile(f, function (err, data) {\n          if (err) { send(res, 404, { error: err.message }); return; }\n          res.writeHead(200, { 'Content-Type': /\\.jpe?g$/i.test(f) ? 'image/jpeg' : 'image/png', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=604800' });\n          res.end(data);\n        });\n      } catch (e) { send(res, 500, { error: e.message }); }\n    });\n    return;\n  }\n  if (a === 'source' && b) {\n    var num = parseInt(p[3] || '1', 10), typ = b.toUpperCase();\n    var viaWindow = function () {\n      try {\n        tizen.tvwindow.setSource({ type: typ, number: num }, function () { send(res, 200, { ok: true }); },\n          function (e) { srcFail(res, e.message); }, 'MAIN');\n      } catch (e) { srcFail(res, e.message); }\n    };\n    if (typ === 'TV') find('tv', function (id) { if (id) launchId(id, res); else viaWindow(); });\n    else viaWindow();\n    return;\n  }\n  send(res, 404, { error: 'inconnu' });\n}).listen(8097, '127.0.0.1');\nlistApps(function () {});\n";
+(function () {
+  var fs = require('fs'), done = false;
+  var fallback = function () { if (done) return; done = true; var c = null; try { c = fs.readFileSync(CACHE, 'utf8'); } catch (e) {} run(c || EMBED, c ? 'cache' : 'intégré'); };
+  var t = setTimeout(fallback, 6000);
   try {
-    tizen.application.getAppsInfo(function (l) { APPS = l.map(function (a) { return { id: a.id, name: a.name || '' }; }); cb(APPS); }, function () { cb([]); });
-  } catch (e) { cb([]); }
-}
-// Trouve l'identifiant d'une appli : d'abord par son nom (ordre de préférence), puis par identifiants connus.
-function find(w, cb) {
-  if (KNOWN[w]) { cb(KNOWN[w]); return; }
-  listApps(function (l) {
-    var names = NAMES[w] || [w], hit = null;
-    var ex = EXACT[w];
-    if (ex) { for (var x = 0; x < l.length && !hit; x++) if (ex.indexOf(l[x].name.toLowerCase().trim()) > -1) hit = l[x].id; names = []; }
-    for (var i = 0; i < names.length && !hit; i++) {
-      for (var j = 0; j < l.length; j++) {
-        var n = l[j].name.toLowerCase();
-        if (n.indexOf(names[i]) > -1 && n.indexOf('tizenbrew') < 0) { hit = l[j].id; break; }
-      }
-    }
-    if (!hit) {
-      var c = CAND[w] || [];
-      for (var k = 0; k < c.length && !hit; k++) { try { tizen.application.getAppInfo(c[k]); hit = c[k]; } catch (e) {} }
-    }
-    if (hit) KNOWN[w] = hit;
-    cb(hit);
-  });
-}
-// Retour automatique sur Cosmos : dès que l'appli lancée n'est plus au premier plan ni en cours, on relance TizenBrew (Cosmos).
-// Bouton Home : l'appli reste en arrière-plan, donc pas de retour forcé.
-var watchT = null, lsn = null, watched = null, since = 0, pend = null;
-var LOG = [];
-function log(m) { var d = new Date(); LOG.push(d.toTimeString().slice(0, 8) + ' ' + m); if (LOG.length > 40) LOG.shift(); }
-// Journal de toutes les activations (sert à régler le retour après le premier test sur la télé).
-try { tizen.application.addAppStatusChangeListener(function (appId, st) { log(st + ' ' + appId); if (st === 'ACTIVATE' && appId === watched && pend) { clearTimeout(pend); pend = null; log('retour annulé (appli revenue)'); } }); } catch (e) { log('listener global KO ' + e.message); }
-function tbApp() { try { return tizen.application.getAppInfo().packageId + '.TizenBrewStandalone'; } catch (e) { return null; } }
-function back(why) {
-  stopWatch();
-  var tb = tbApp();
-  log('retour Cosmos (' + why + ')');
-  if (tb) { try { tizen.application.launch(tb); } catch (e) { log('relance KO ' + e.message); } }
-}
-function stopWatch() {
-  if (watchT) { clearInterval(watchT); watchT = null; }
-  if (lsn !== null) { try { tizen.application.removeAppStatusChangeListener(lsn); } catch (e) {} lsn = null; }
-  if (pend) { clearTimeout(pend); pend = null; }
-  watched = null;
-}
-// Retour automatique : l'appli lancée passe en arrière-plan (Retour, sortie) ou se ferme → on relance Cosmos.
-// Rien pendant les 5 premières secondes, et on attend 1,5 s pour ignorer les désactivations brèves (profils, pubs).
-function watch(id) {
-  stopWatch(); watched = id; since = Date.now();
-  try {
-    lsn = tizen.application.addAppStatusChangeListener(function (appId, status) {
-      if (appId !== watched || status !== 'DEACTIVATE' || Date.now() - since < 5000) return;
-      if (pend) clearTimeout(pend);
-      pend = setTimeout(function () { pend = null; back('désactivée'); }, 1500);
-    }, id);
-  } catch (e) { lsn = null; }
-  var seen = false;
-  watchT = setInterval(function () {
-    try {
-      tizen.application.getAppsContext(function (ctx) {
-        var running = false;
-        for (var i = 0; i < ctx.length; i++) if (ctx[i].appId === id) running = true;
-        if (running) { seen = true; return; }
-        if (seen) back('fermée');
-      });
-    } catch (e) {}
-  }, 500);
-}
-function launchId(id, res) {
-  try {
-    tizen.application.launch(id, function () { watch(id); send(res, 200, { ok: true, id: id }); },
-      function (e) { send(res, 500, { ok: false, error: e.message }); });
-  } catch (e) { send(res, 500, { ok: false, error: e.message }); }
-}
-function openSettings(res) {
-  find('settings', function (id) {
-    if (id) { launchId(id, res); return; }
-    try {
-      var ac = new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/setting');
-      tizen.application.launchAppControl(ac, null, function () { send(res, 200, { ok: true }); },
-        function (e) { send(res, 500, { ok: false, error: 'réglages indisponibles — bouton Maison' }); });
-    } catch (e) { send(res, 500, { ok: false, error: 'réglages indisponibles — bouton Maison' }); }
-  });
-}
-function srcFail(res, m) {
-  listApps(function (l) {
-    var c = l.filter(function (x) { return /tv|source|hdmi|live|channel|cha[iî]ne/i.test(x.name + ' ' + x.id); }).slice(0, 6).map(function (x) { return x.name; });
-    send(res, 500, { ok: false, error: 'bascule impossible (' + m + ')' + (c.length ? ' — touche rouge : diagnostic' : '') });
-  });
-}
-http.createServer(function (req, res) {
-  var p = decodeURIComponent(req.url.split('?')[0]).split('/');
-  var a = p[1], b = (p[2] || '').toLowerCase();
-  if (a === 'ping') { send(res, 200, { ok: true }); return; }
-  if (a === 'apps') { APPS = null; listApps(function (l) { send(res, 200, [{ name: '» Cosmos (retour) = ' + tbApp(), id: 'self' }].concat(LOG.map(function (m) { return { name: '» ' + m, id: 'log' }; }), l)); }); return; }
-  if (a === 'settings') { openSettings(res); return; }
-  if (a === 'launch' && b) {
-    find(b, function (id) { if (id) launchId(id, res); else send(res, 404, { ok: false, error: 'appli non installée' }); });
-    return;
-  }
-  if (a === 'icon' && b) {
-    find(b, function (id) {
-      if (!id) { send(res, 404, { error: 'introuvable' }); return; }
-      try {
-        var f = String(tizen.application.getAppInfo(id).iconPath || '').replace(/^file:\/\//, '');
-        fs.readFile(f, function (err, data) {
-          if (err) { send(res, 404, { error: err.message }); return; }
-          res.writeHead(200, { 'Content-Type': /\.jpe?g$/i.test(f) ? 'image/jpeg' : 'image/png', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'max-age=604800' });
-          res.end(data);
-        });
-      } catch (e) { send(res, 500, { error: e.message }); }
-    });
-    return;
-  }
-  if (a === 'source' && b) {
-    var num = parseInt(p[3] || '1', 10), typ = b.toUpperCase();
-    var viaWindow = function () {
-      try {
-        tizen.tvwindow.setSource({ type: typ, number: num }, function () { send(res, 200, { ok: true }); },
-          function (e) { srcFail(res, e.message); }, 'MAIN');
-      } catch (e) { srcFail(res, e.message); }
-    };
-    if (typ === 'TV') find('tv', function (id) { if (id) launchId(id, res); else viaWindow(); });
-    else viaWindow();
-    return;
-  }
-  send(res, 404, { error: 'inconnu' });
-}).listen(8097, '127.0.0.1');
-listApps(function () {});
+    require('https').get(CORE_URL, function (r) {
+      var d = ''; r.setEncoding('utf8');
+      r.on('data', function (x) { d += x; });
+      r.on('end', function () { if (done) return; done = true; clearTimeout(t);
+        if (r.statusCode === 200 && d.indexOf('createServer') > -1) { try { fs.writeFileSync(CACHE, d); } catch (e) {} run(d, 'github'); } else { done = false; fallback(); } });
+    }).on('error', function () { clearTimeout(t); fallback(); });
+  } catch (e) { clearTimeout(t); fallback(); }
+})();
