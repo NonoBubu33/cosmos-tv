@@ -89,7 +89,7 @@ var APPS=[
  {nm:'Netflix',c:'#c8102e',ic:'<path d="M4.5 10.5L12 5l7.5 5.5"/><path d="M6.5 10v4.5h11V10"/><path d="M10.5 14.5v-2.5h3v2.5"/><path d="M8 14.5v4M16 14.5v4"/><path d="'+W+'"/>'},
  {nm:'Prime Video',c:'#00a8e1',ic:'<path d="M3 14.5h18l-2.6 4H5.6z"/><path d="M7 14.5v-3h5v3"/><path d="M14 14.5V5.5l4.5 9"/><path d="'+W+'"/>'},
  {nm:'YouTube',c:'#ff3b30',ic:'<path d="M10 20.5l1-11h2l1 11z"/><path d="M9.3 9.5h5.4"/><path d="M11 6h2v3.5h-2z"/><path d="M12 6V4.5"/><path d="M6.5 5.5l2.5 1.3M17.5 5.5L15 6.8"/><path d="M10.6 14h2.8"/><path d="M5 20.5h14"/>'},
- {nm:'Arte',c:'#f28c18',ic:'<path d="M3.5 13.5c0-4.3 3.8-7.5 8.5-7.5s8.5 3.2 8.5 7.5c0 2.3-3.8 4.5-8.5 4.5s-8.5-2.2-8.5-4.5z"/><path d="M3.8 13.4c3 1.7 13.4 1.7 16.4 0"/><circle cx="12" cy="11.2" r="1.7"/><path d="M8 8.5c1 1 1.2 2.5 1 4M16 8.5c-1 1-1.2 2.5-1 4"/>'},
+ {nm:'TV',c:'#4A7C8C',ic:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 20h8M12 17v3"/>'},
  {nm:'PlayStation',c:'#2f6fe0',hd:'HDMI 1',ic:'<path d="M5 8.5c3-3.4 11-3.4 14 0"/><path d="M5 8.5l7 6 7-6"/><path d="M12 14.5v1.8"/><path d="M2.5 21c3.8-4.6 7.4-5.6 10.3-5.6 2.9 0 6 1.7 8.7 5.6"/>'},
  {nm:'Switch',c:'#e4000f',hd:'HDMI 4',ic:'<path d="M11 3.5v12.5H4.5z"/><path d="M13 6.5v9.5h5.5z"/><path d="M3 18h18"/><path d="'+W+'"/>'}
 ];
@@ -99,14 +99,16 @@ APPS.forEach(function(a,i){var b=document.createElement('button');b.className='a
  b.addEventListener('click',function(){if(sel===i)launch();else pick(i);wake();});document.getElementById(a.hd?'hdmi':'apps').appendChild(b);els.push(b);});
 function pick(i){sel=(i+APPS.length)%APPS.length;els.forEach(function(e,k){e.classList.toggle('on',k===sel)});}
 var tt;function toast(m,d){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},d||2200);}
-var KEY={'Netflix':'netflix','Prime Video':'prime','YouTube':'youtube','Arte':'arte'};
+var KEY={'Netflix':'netflix','Prime Video':'prime','YouTube':'youtube'};
+var SVC='http://127.0.0.1:8097/';
 function launch(){var a=APPS[sel];
- if(a.hd){toast('Pour '+a.nm+' : bouton Source puis '+a.hd,4000);return;}
- toast('Ouverture de '+a.nm+'…',4000);
- var x=new XMLHttpRequest();x.open('GET','http://127.0.0.1:8097/launch/'+KEY[a.nm]);x.timeout=8000;
+ var path=a.hd?'source/hdmi/'+a.hd.replace(/\D/g,''):(a.nm==='TV'?'source/tv/1':'launch/'+KEY[a.nm]);
+ toast((a.hd?'Passage sur '+a.hd+' — ':(a.nm==='TV'?'Passage sur la ':'Ouverture de '))+a.nm+'…',4000);
+ var x=new XMLHttpRequest();x.open('GET',SVC+path);x.timeout=8000;
  x.onload=function(){var r={};try{r=JSON.parse(x.responseText);}catch(e){}if(!r.ok)toast(a.nm+' : '+(r.error||'erreur '+x.status),5000);};
  x.onerror=x.ontimeout=function(){toast('Service Cosmos non démarré — relance Cosmos depuis TizenBrew',5000);};
  x.send();}
+APPS.forEach(function(a,i){var k=KEY[a.nm];if(!k)return;var im=new Image();im.onload=function(){var s=els[i].querySelector('.ico');s.style.background='transparent';s.innerHTML='';im.style.cssText='width:100%;height:100%;object-fit:contain;border-radius:inherit';s.appendChild(im);};im.src=SVC+'icon/'+k;});
 var hideT;function wake(){document.body.classList.add('ui');clearTimeout(hideT);hideT=setTimeout(function(){document.body.classList.remove('ui')},8000);}
 function key(k){var ui=document.body.classList.contains('ui');
  if(!ui){if(k==='ArrowRight'){go(1);return;}if(k==='ArrowLeft'){go(-1);return;}wake();return;}
